@@ -1,31 +1,71 @@
 import { useState, useEffect } from "react";
 import "./App.css";
+import { getWeather } from "./services/weather";
 
 /* ── DATA ── */
-const W = {
-  city: "Istanbul",
-  temp: 24,
-  feels: 22,
-  rain: 10,
-  wind: "Light",
-  uv: 6,
-  humidity: 60,
-  headline: "Warm & Sunny",
-  bestTime: "2 – 5 PM",
-};
 
 const RESCHEDULE_ITEMS = [
-  { id: 1, label: "Evening Run", time: "6:00 PM", icon: "🏃", conflict: true, fix: "Move to 3:30 PM — clear skies" },
-  { id: 2, label: "Walk the Dog", time: "5:00 PM", icon: "🐕", conflict: false, fix: "" },
-  { id: 3, label: "Outdoor Lunch", time: "1:00 PM", icon: "🍱", conflict: false, fix: "" },
-  { id: 4, label: "Grocery Run", time: "7:00 PM", icon: "🛒", conflict: false, fix: "" },
-  { id: 5, label: "Dinner Out", time: "7:30 PM", icon: "🍽️", conflict: true, fix: "Move to 5 PM or indoor option" },
+  {
+    id: 1,
+    label: "Evening Run",
+    time: "6:00 PM",
+    icon: "🏃",
+    conflict: true,
+    fix: "Move to 3:30 PM — clear skies",
+  },
+  {
+    id: 2,
+    label: "Walk the Dog",
+    time: "5:00 PM",
+    icon: "🐕",
+    conflict: false,
+    fix: "",
+  },
+  {
+    id: 3,
+    label: "Outdoor Lunch",
+    time: "1:00 PM",
+    icon: "🍱",
+    conflict: false,
+    fix: "",
+  },
+  {
+    id: 4,
+    label: "Grocery Run",
+    time: "7:00 PM",
+    icon: "🛒",
+    conflict: false,
+    fix: "",
+  },
+  {
+    id: 5,
+    label: "Dinner Out",
+    time: "7:30 PM",
+    icon: "🍽️",
+    conflict: true,
+    fix: "Move to 5 PM or indoor option",
+  },
 ];
 
 const SUGGESTIONS = [
-  { icon: "🚶", text: "Perfect for a walk right now", tag: "Now", color: "green" },
-  { icon: "☔", text: "Umbrella if out after 5 PM", tag: "After 5", color: "blue" },
-  { icon: "🧥", text: "Light jacket for this evening", tag: "6 PM+", color: "violet" },
+  {
+    icon: "🚶",
+    text: "Perfect for a walk right now",
+    tag: "Now",
+    color: "green",
+  },
+  {
+    icon: "☔",
+    text: "Umbrella if out after 5 PM",
+    tag: "After 5",
+    color: "blue",
+  },
+  {
+    icon: "🧥",
+    text: "Light jacket for this evening",
+    tag: "6 PM+",
+    color: "violet",
+  },
   { icon: "🌿", text: "Low pollen today", tag: "All day", color: "amber" },
 ];
 
@@ -45,25 +85,81 @@ function Toast({ msg, onDone }) {
 }
 
 /* ── WEATHER ── */
-function WeatherSummaryCard() {
-  return (
-    <div className="wcard">
-      <div className="wcard-lbl">Weather Summary</div>
+function getWeatherTheme(code) {
+  if (code === 0) return {
+    bg: "linear-gradient(135deg, #FFD700, #FFA500)",  // sunny yellow
+    cardBg: "#FFF9E6",
+    accent: "#F59E0B",
+    emoji: "☀️"
+  };
+  if (code <= 2) return {
+    bg: "linear-gradient(135deg, #87CEEB, #B0C4DE)",  // partly cloudy blue
+    cardBg: "#EFF6FF",
+    accent: "#60A5FA",
+    emoji: "⛅"
+  };
+  if (code === 3) return {
+    bg: "linear-gradient(135deg, #9CA3AF, #6B7280)",  // overcast grey
+    cardBg: "#F3F4F6",
+    accent: "#9CA3AF",
+    emoji: "☁️"
+  };
+  if (code <= 67) return {
+    bg: "linear-gradient(135deg, #4A7FA5, #2C5F7A)",  // rainy dark blue
+    cardBg: "#EFF6FF",
+    accent: "#3B82F6",
+    emoji: "🌧️"
+  };
+  if (code <= 77) return {
+    bg: "linear-gradient(135deg, #E0F2FE, #BAE6FD)",  // snowy light
+    cardBg: "#F0F9FF",
+    accent: "#7DD3FC",
+    emoji: "❄️"
+  };
+  if (code <= 99) return {
+    bg: "linear-gradient(135deg, #1F2937, #374151)",  // stormy dark
+    cardBg: "#1F2937",
+    accent: "#818CF8",
+    emoji: "⛈️"
+  };
+  return {
+    bg: "linear-gradient(135deg, #D1FAE5, #6EE7B7)",
+    cardBg: "#F0FDF4",
+    accent: "#10B981",
+    emoji: "🌡️"
+  };
+}
 
+function describeWeather(code) {
+  if (code === 0) return { text: "Clear sky", emoji: "☀️" };
+  if (code <= 2) return { text: "Partly cloudy", emoji: "⛅" };
+  if (code === 3) return { text: "Overcast", emoji: "☁️" };
+  if (code <= 49) return { text: "Foggy", emoji: "🌫️" };
+  if (code <= 67) return { text: "Rainy", emoji: "🌧️" };
+  if (code <= 77) return { text: "Snowy", emoji: "❄️" };
+  if (code <= 82) return { text: "Showers", emoji: "🌦️" };
+  if (code <= 99) return { text: "Thunderstorm", emoji: "⛈️" };
+  return { text: "Unknown", emoji: "🌡️" };
+}
+
+function WeatherSummaryCard({ current, theme }) {
+  const { text, emoji } = describeWeather(current.weathercode);
+
+  return (
+    <div className="wcard" style={{ background: theme.bg, boxShadow: `0 4px 24px ${theme.accent}44` }}>
+      <div className="wcard-lbl">Weather Summary</div>
       <div className="wcard-main">
-        <div className="wicon">☀️</div>
+        <div className="wicon" style={{ fontSize: "3rem" }}>{emoji}</div>
         <div>
-          <div className="wtemp">{W.temp}°C</div>
-          <div className="wcond">{W.headline}</div>
-          <div className="wdesc">Feels like {W.feels}°</div>
+          <div className="wtemp">{Math.round(current.temperature_2m)}°C</div>
+          <div className="wcond" style={{ color: theme.accent }}>{text}</div>
+          <div className="wdesc">Feels like {Math.round(current.apparent_temperature ?? current.temperature_2m)}°</div>
         </div>
       </div>
-
-      <div className="wbest">✅ Best time: {W.bestTime}</div>
+      <div className="wbest">✅ Best time: 2 – 5 PM</div>
     </div>
   );
 }
-
 /* ── SUGGESTIONS ── */
 function SmartSuggestions() {
   return (
@@ -174,8 +270,8 @@ function ReschedulePanel({ toast }) {
               ...i,
               conflict: false,
               time: type === "earlier" ? "3:30 PM" : "Tomorrow",
-            }
-      )
+            },
+      ),
     );
 
     toast(type === "earlier" ? "Rescheduled earlier" : "Moved to tomorrow");
@@ -187,18 +283,11 @@ function ReschedulePanel({ toast }) {
     <aside className="rpanel">
       <div className="rplbl">
         Reschedule
-        {conflicts > 0 && (
-          <span className="badge">{conflicts} alerts</span>
-        )}
+        {conflicts > 0 && <span className="badge">{conflicts} alerts</span>}
       </div>
 
       {items.map((i) => (
-        <RescheduleItem
-          key={i.id}
-          item={i}
-          onResolve={resolve}
-          toast={toast}
-        />
+        <RescheduleItem key={i.id} item={i} onResolve={resolve} toast={toast} />
       ))}
 
       <button className="addbtn">＋ Add Plan</button>
@@ -217,9 +306,41 @@ function ReschedulePanel({ toast }) {
   );
 }
 
+function getAfternoonRisk(hourlyData) {
+  // hours 17-21 = evening
+  const eveningRain = hourlyData.precipitation_probability
+    .slice(17, 21)
+    .some((prob) => prob > 40);
+
+  return eveningRain ? "Bring an umbrella if going out tonight!" : null;
+}
+
 /* ── APP ── */
 export default function App() {
   const [toast, setToast] = useState(null);
+  const [weather, setWeather] = useState(null);
+  const [greeting, setGreeting] = useState("");
+  const [theme, setTheme] = useState(null); 
+
+  useEffect(() => {
+    getWeather().then((data) => {
+      setWeather(data);
+      setTheme(getWeatherTheme(data.current.weathercode)); 
+
+      const timeStr = data.current.time;
+      const hour = new Date(timeStr).getHours();
+
+
+      if (hour >= 5 && hour < 12) setGreeting("Good Morning");
+      else if (hour >= 12 && hour < 17) setGreeting("Good Afternoon");
+      else if (hour >= 17 && hour < 21) setGreeting("Good Evening");
+      else setGreeting("Good Night");
+    });
+  }, []);
+
+  if (!weather || !theme) return <p>Loading weather...</p>;
+
+  const current = weather.current;
 
   return (
     <>
@@ -230,13 +351,13 @@ export default function App() {
           <div className="greet-row">
             <div>
               <div className="greet-name">
-                Good Morning <span>Fatima</span> 👋
+                {greeting} <span style={{ color: theme.accent }}>Fatima</span> 👋
               </div>
               <div className="greet-sub">Weather-based planning assistant</div>
             </div>
           </div>
 
-          <WeatherSummaryCard />
+          <WeatherSummaryCard current={current} theme={theme} />
           <SmartSuggestions />
         </main>
 
