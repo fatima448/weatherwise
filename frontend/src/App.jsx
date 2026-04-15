@@ -154,21 +154,70 @@ function getWeatherTheme(code) {
     type: "default",
   };
 }
+function isNight(timeStr) {
+  const hour = new Date(timeStr).getHours();
+  return hour < 6 || hour >= 18; // night from 6PM → 6AM
+}
 
-function describeWeather(code) {
-  if (code === 0) return { text: "Clear sky", emoji: "☀️" };
-  if (code <= 2) return { text: "Partly cloudy", emoji: "⛅" };
-  if (code === 3) return { text: "Overcast", emoji: "☁️" };
-  if (code <= 49) return { text: "Foggy", emoji: "🌫️" };
-  if (code <= 67) return { text: "Rainy", emoji: "🌧️" };
-  if (code <= 77) return { text: "Snowy", emoji: "❄️" };
-  if (code <= 82) return { text: "Showers", emoji: "🌦️" };
-  if (code <= 99) return { text: "Thunderstorm", emoji: "⛈️" };
-  return { text: "Unknown", emoji: "🌡️" };
+function describeWeather(code, timeStr) {
+  const night = isNight(timeStr);
+
+  if (code === 0)
+    return {
+      text: "Clear sky",
+      emoji: night ? "🌙" : "☀️",
+    };
+
+  if (code <= 2)
+    return {
+      text: "Partly cloudy",
+      emoji: night ? "☁️" : "⛅",
+    };
+
+  if (code === 3)
+    return {
+      text: "Overcast",
+      emoji: "☁️",
+    };
+
+  if (code <= 49)
+    return {
+      text: "Foggy",
+      emoji: "🌫️",
+    };
+
+  if (code <= 67)
+    return {
+      text: "Rainy",
+      emoji: night ? "🌧️" : "🌧️",
+    };
+
+  if (code <= 77)
+    return {
+      text: "Snowy",
+      emoji: night ? "❄️" : "❄️",
+    };
+
+  if (code <= 82)
+    return {
+      text: "Showers",
+      emoji: night ? "🌧️" : "🌦️",
+    };
+
+  if (code <= 99)
+    return {
+      text: "Thunderstorm",
+      emoji: "⛈️",
+    };
+
+  return {
+    text: "Unknown",
+    emoji: "🌡️",
+  };
 }
 
 function WeatherSummaryCard({ current, theme }) {
-  const { text, emoji } = describeWeather(current.weathercode);
+  const { text, emoji } = describeWeather(current.weathercode, current.time);
 
   return (
     <div
@@ -223,7 +272,7 @@ function SmartSuggestions() {
 }
 
 /* ── ITEM ── */
-function RescheduleItem({ item, onResolve, toast }) {
+function RescheduleItem({ item, onResolve, onDelete, toast }) {
   const [open, setOpen] = useState(false);
   const [done, setDone] = useState(false);
 
@@ -293,6 +342,15 @@ function RescheduleItem({ item, onResolve, toast }) {
             >
               Done
             </button>
+            <button
+              className="delete-btn"
+              onClick={(e) => {
+                e.stopPropagation();
+                onDelete(item.id);
+              }}
+            >
+              🗑️
+            </button>
           </div>
         </div>
       )}
@@ -301,6 +359,16 @@ function RescheduleItem({ item, onResolve, toast }) {
 }
 
 /* ── PANEL ── */
+function convertToMinutes(timeStr) {
+  const [time, modifier] = timeStr.split(" ");
+  let [hours, minutes] = time.split(":").map(Number);
+
+  if (modifier === "PM" && hours !== 12) hours += 12;
+  if (modifier === "AM" && hours === 12) hours = 0;
+
+  return hours * 60 + minutes;
+}
+
 function ReschedulePanel({ toast }) {
   const [items, setItems] = useState(RESCHEDULE_ITEMS);
   const [newLabel, setNewLabel] = useState("");
@@ -322,27 +390,33 @@ function ReschedulePanel({ toast }) {
 
     toast(type === "earlier" ? "Rescheduled earlier" : "Moved to tomorrow");
   };
-const addPlan = () => {
-  if (!newLabel || !newTime) {
-    toast("Please enter activity and time");
-    return;
-  }
-
-  const newItem = {
-    id: Date.now(),
-    label: newLabel,
-    time: newTime,
-    icon: EMOJIS[newLabel.toLowerCase()] || "✨", 
-    conflict: false,
-    fix: "",
+  const deleteItem = (id) => {
+    if (!confirm("Delete this activity?")) return;
+    setItems((prev) => prev.filter((item) => item.id !== id));
+    toast("Deleted");
   };
 
-  setItems((prev) => [...prev, newItem]);
+  const addPlan = () => {
+    if (!newLabel || !newTime) {
+      toast("Please enter activity and time");
+      return;
+    }
+    const conflict = hasConflict(newTime, items);
 
-  setNewLabel("");
-  setNewTime("");
-};
-   
+    const newItem = {
+      id: Date.now(),
+      label: newLabel,
+      time: newTime,
+      icon: EMOJIS[newLabel.toLowerCase()] || "✨",
+      conflict: conflict,
+      fix: conflict ? "This overlaps with another plan" : "",
+    };
+
+    setItems((prev) => [...prev, newItem]);
+
+    setNewLabel("");
+    setNewTime("");
+  };
 
   const conflicts = items.filter((i) => i.conflict).length;
 
@@ -351,38 +425,44 @@ const addPlan = () => {
       <div className="task-title">Reschedule alerts</div>
 
       {items.map((i) => (
-        <RescheduleItem key={i.id} item={i} onResolve={resolve} toast={toast} />
+        <RescheduleItem
+          key={i.id}
+          item={i}
+          onResolve={resolve}
+          onDelete={deleteItem}
+          toast={toast}
+        />
       ))}
       {showForm ? (
-  <div className="inline-add">
-    <input
-      type="text"
-      placeholder="Activity"
-      value={newLabel}
-      onChange={(e) => setNewLabel(e.target.value)}
-    />
+        <div className="inline-add">
+          <input
+            type="text"
+            placeholder="Activity"
+            value={newLabel}
+            onChange={(e) => setNewLabel(e.target.value)}
+          />
 
-    <input
-      type="time"
-      value={newTime}
-      onChange={(e) => setNewTime(e.target.value)}
-    />
+          <input
+            type="time"
+            value={newTime}
+            onChange={(e) => setNewTime(e.target.value)}
+          />
 
-    <button
-      className="confirm-btn"
-      onClick={() => {
-        addPlan();
-        setShowForm(false);
-      }}
-    >
-      ✔
-    </button>
-  </div>
-) : (
-  <button className="addbtn" onClick={() => setShowForm(true)}>
-    ＋ Add Plan
-  </button>
-)}
+          <button
+            className="confirm-btn"
+            onClick={() => {
+              addPlan();
+              setShowForm(false);
+            }}
+          >
+            ✔
+          </button>
+        </div>
+      ) : (
+        <button className="addbtn" onClick={() => setShowForm(true)}>
+          ＋ Add Plan
+        </button>
+      )}
       <hr className="idivider" />
 
       <div className="insight-title">Insights</div>
@@ -396,7 +476,17 @@ const addPlan = () => {
     </aside>
   );
 }
+function hasConflict(newTime, items) {
+  const newStart = convertToMinutes(newTime);
+  const newEnd = newStart + 60; // assume 1-hour activity
 
+  return items.some((item) => {
+    const itemStart = convertToMinutes(item.time);
+    const itemEnd = itemStart + 60;
+
+    return newStart < itemEnd && newEnd > itemStart;
+  });
+}
 function getAfternoonRisk(hourlyData) {
   // hours 17-21 = evening
   const eveningRain = hourlyData.precipitation_probability
