@@ -1,7 +1,12 @@
 // src/App.jsx  — WeatherWise with ML clothing recommendations
 import { useState, useEffect } from "react";
 import "./App.css";
-import { getWeather, getMLPrediction, clothingLabel } from "./services/weather";
+import {
+  getWeather,
+  getMLPredictionAll,
+  clothingLabel,
+  getForecastAtHour,
+} from "./services/weather";
 import { EMOJIS } from "./data/emojiMap";
 /* ── DATA ── */
 const RESCHEDULE_ITEMS = [
@@ -293,69 +298,170 @@ function MLClothingCard({ prediction, loading, error, theme }) {
   );
 }
 
+function formatHour(hour) {
+  const period = hour >= 12 ? "PM" : "AM";
+  const h = hour % 12 === 0 ? 12 : hour % 12;
+  return `${h} ${period}`;
+}
+
+const hour = new Date().getHours();
+
+let nowTag;
+let laterTag;
+
+if (hour < 12) {
+  nowTag = "This morning";
+  laterTag = "Later today";
+} else if (hour < 18) {
+  nowTag = "This afternoon";
+  laterTag = "This evening";
+} else {
+  nowTag = "This evening";
+  laterTag = "Tonight";
+}
+
+if (hour < 12) {
+  nowTag = "This morning";
+  laterTag = "Later today";
+} else if (hour < 18) {
+  nowTag = "This afternoon";
+  laterTag = "This evening";
+} else {
+  nowTag = "This evening";
+  laterTag = "Tonight";
+}
+
+function getExtraAdvice(weather, mlPrediction) {
+  const temp = weather?.current?.temperature_2m ?? 0;
+  const uv = weather?.current?.uv_index ?? 0;
+
+  // ☔ Rain
+  if (mlPrediction?.umbrella_needed) {
+    return {
+      icon: "☔",
+      text: "Take an umbrella",
+      tag: "Now",
+    };
+  }
+
+  // ☀️ Strong sun → sunscreen first
+  if (uv >= 6) {
+    return {
+      icon: "🧴",
+      text: "Use sunscreen",
+      tag: "Now",
+    };
+  }
+
+  // 😎 Moderate sun → sunglasses
+  if (uv >= 3) {
+    return {
+      icon: "🕶️",
+      text: "Sunglasses will help",
+      tag: "Now",
+    };
+  }
+
+  // 🔥 Hot
+  if (temp >= 28) {
+    return {
+      icon: "💧",
+      text: "Stay hydrated",
+      tag: "Now",
+    };
+  }
+
+  // 🌤️ Default
+  return {
+    icon: "🌤️",
+    text: "No umbrella needed",
+    tag: "Now",
+  };
+}
 /* ── SMART SUGGESTIONS ── */
-function SmartSuggestions({ mlPrediction }) {
-  const suggestions = mlPrediction
-    ? [
-        {
-          icon: CLOTHING_EMOJI[mlPrediction.clothing_recommendation] ?? "👕",
-          text: clothingLabel(mlPrediction.clothing_recommendation),
-          tag: "Now",
-          color: "violet",
-        },
-        {
-          icon: mlPrediction.umbrella_needed ? "☔" : "🌤️",
-          text: mlPrediction.umbrella_needed
-            ? "Umbrella recommended"
-            : "No umbrella needed",
-          tag: "Today",
-          color: "blue",
-        },
-        {
-          icon: "🚶",
-          text: "Perfect for a walk right now",
-          tag: "Now",
-          color: "green",
-        },
-        {
-          icon: "🌿",
-          text: "Low pollen today",
-          tag: "All day",
-          color: "amber",
-        },
-      ]
-    : [
-        {
-          icon: "🚶",
-          text: "Perfect for a walk right now",
-          tag: "Now",
-          color: "green",
-        },
-        {
-          icon: "☔",
-          text: "Umbrella if out after 5 PM",
-          tag: "After 5",
-          color: "blue",
-        },
-        {
-          icon: "🧥",
-          text: "Light jacket for this evening",
-          tag: "6 PM+",
-          color: "violet",
-        },
-        {
-          icon: "🌿",
-          text: "Low pollen today",
-          tag: "All day",
-          color: "amber",
-        },
-      ];
+function SmartSuggestions({ mlPrediction, weather }) {
+  // ✅ IF ML EXISTS
+  if (mlPrediction && mlPrediction.activity_suggestions?.length > 0) {
+    const top1 = mlPrediction.activity_suggestions[0];
+    const top2 = mlPrediction.activity_suggestions[1];
+    const now = new Date();
+    const currentHour = now.getHours();
+    const extra = getExtraAdvice(weather, mlPrediction);
+
+    const nextHour = (currentHour + 2) % 24;
+    const laterHour = (currentHour + 4) % 24;
+
+    const suggestions = [
+      {
+        icon: CLOTHING_EMOJI[mlPrediction.clothing_recommendation] ?? "👕",
+        text: clothingLabel(mlPrediction.clothing_recommendation),
+        tag: "Now",
+        color: "violet",
+      },
+      {
+        icon: extra.icon,
+        text: extra.text,
+        tag: "Today",
+        color: "blue",
+      },
+      {
+        icon: top1.emoji,
+        text: `${top1.label}`,
+        tag: "Best now",
+        color: "green",
+      },
+      {
+        icon: top2?.emoji,
+        text: `${top2.label}`,
+        tag: laterTag,
+        color: "amber",
+      },
+    ];
+
+    return (
+      <div>
+        <div className="smart-title">Smart Suggestions</div>
+        <div className="sgrid">
+          {suggestions.map((s, i) => (
+            <div key={i} className={`scard ${s.color}`}>
+              <div className="sicon">{s.icon}</div>
+              <div className="stxt">{s.text}</div>
+              <span className={`stag ${s.color}`}>{s.tag}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  // ✅ FALLBACK (VERY IMPORTANT)
+  const fallback = [
+    {
+      icon: "🚶",
+      text: "Perfect for a walk right now",
+      tag: "Now",
+      color: "green",
+    },
+    {
+      icon: "☔",
+      text: "Umbrella if out after 5 PM",
+      tag: "After 5",
+      color: "blue",
+    },
+    {
+      icon: "🧥",
+      text: "Light jacket for this evening",
+      tag: "6 PM+",
+      color: "violet",
+    },
+    { icon: "🌿", text: "Low pollen today", tag: "All day", color: "amber" },
+  ];
 
   return (
     <div>
       <div className="smart-title">Smart Suggestions</div>
       <div className="sgrid">
-        {suggestions.map((s, i) => (
+        {fallback.map((s, i) => (
           <div key={i} className={`scard ${s.color}`}>
             <div className="sicon">{s.icon}</div>
             <div className="stxt">{s.text}</div>
@@ -630,12 +736,13 @@ export default function App() {
     });
 
     // Fetch ML prediction separately (backend may be offline → graceful fallback)
-    getMLPrediction(LAT, LON)
+    getMLPredictionAll(LAT, LON)
       .then((pred) => {
         setMlPred(pred);
         setMlLoading(false);
       })
-      .catch(() => {
+      .catch((err) => {
+        console.error("ML ERROR:", err);
         setMlError(true);
         setMlLoading(false);
       });
@@ -659,7 +766,7 @@ export default function App() {
 
           <WeatherSummaryCard current={weather.current} theme={theme} />
 
-          <SmartSuggestions mlPrediction={mlPred} />
+          <SmartSuggestions mlPrediction={mlPred} weather={weather} />
         </main>
 
         <ReschedulePanel toast={setToast} />
