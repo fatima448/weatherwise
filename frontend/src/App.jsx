@@ -426,6 +426,16 @@ function SmartSuggestions({ mlPrediction, weather }) {
             <div key={i} className={`scard ${s.color}`}>
               <div className="sicon">{s.icon}</div>
               <div className="stxt">{s.text}</div>
+              {i === 2 && (
+                <div style={{ marginTop: 10, display: "flex", flexDirection: "column", gap: 5 }}>
+                  {mlPrediction.activity_suggestions.map((a, ai) => (
+                    <div key={ai} style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                      <span style={{ fontSize: 14 }}>{a.emoji}</span>
+                      <span style={{ fontSize: 12, fontWeight: 600, color: "var(--text)" }}>{a.label}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
               <span className={`stag ${s.color}`}>{s.tag}</span>
             </div>
           ))}
@@ -720,12 +730,45 @@ export default function App() {
   const [mlLoading, setMlLoading] = useState(true);
   const [mlError, setMlError] = useState(false);
 
-  const LAT = 41.01;
-  const LON = 28.97;
+  const [lat, setLat] = useState(41.01);
+  const [lon, setLon] = useState(28.97);
+  const [cityInput, setCityInput] = useState("");
+  const [citySearching, setCitySearching] = useState(false);
+  const [cityError, setCityError] = useState("");
+
+  const searchCity = async () => {
+    if (!cityInput.trim()) return;
+    setCitySearching(true);
+    setCityError("");
+    try {
+      const res = await fetch(
+        `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(cityInput)}&count=1`
+      );
+      const data = await res.json();
+      if (!data.results || data.results.length === 0) {
+        setCityError("City not found. Try another name.");
+        setCitySearching(false);
+        return;
+      }
+      const { latitude, longitude } = data.results[0];
+      setLat(latitude);
+      setLon(longitude);
+      setCityInput("");
+    } catch {
+      setCityError("Search failed. Check your connection.");
+    }
+    setCitySearching(false);
+  };
 
   useEffect(() => {
+    setWeather(null);
+    setTheme(null);
+    setMlPred(null);
+    setMlLoading(true);
+    setMlError(false);
+
     // Fetch raw weather (for existing UI)
-    getWeather(LAT, LON).then((data) => {
+    getWeather(lat, lon).then((data) => {
       setWeather(data);
       setTheme(getWeatherTheme(data.current.weathercode));
       const hour = new Date(data.current.time).getHours();
@@ -736,7 +779,7 @@ export default function App() {
     });
 
     // Fetch ML prediction separately (backend may be offline → graceful fallback)
-    getMLPredictionAll(LAT, LON)
+    getMLPredictionAll(lat, lon)
       .then((pred) => {
         setMlPred(pred);
         setMlLoading(false);
@@ -746,7 +789,7 @@ export default function App() {
         setMlError(true);
         setMlLoading(false);
       });
-  }, []);
+  }, [lat, lon]);
 
   if (!weather || !theme) return <p>Loading weather…</p>;
 
@@ -762,6 +805,26 @@ export default function App() {
                 {formatDate(weather.current.time)}
               </div>
             </div>
+            <div className="city-search">
+              <div className="city-search-row">
+                <input
+                  className="city-input"
+                  type="text"
+                  placeholder="Search city…"
+                  value={cityInput}
+                  onChange={(e) => setCityInput(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && searchCity()}
+                />
+                <button
+                  className="city-btn"
+                  onClick={searchCity}
+                  disabled={citySearching}
+                >
+                  {citySearching ? "…" : "🔍"}
+                </button>
+              </div>
+              {cityError && <div className="city-error">{cityError}</div>}
+            </div>
           </div>
 
           <WeatherSummaryCard current={weather.current} theme={theme} />
@@ -774,3 +837,4 @@ export default function App() {
     </>
   );
 }
+
