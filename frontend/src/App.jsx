@@ -378,6 +378,37 @@ function getExtraAdvice(weather, mlPrediction) {
     tag: "Now",
   };
 }
+function getNextHours(weatherData, count = 4) {
+  if (!weatherData?.hourly) return [];
+
+  const now = new Date();
+  const currentHour = now.getHours();
+
+  // Find index of current hour in the hourly array
+  const startIndex = weatherData.hourly.time.findIndex(
+    (t) => new Date(t).getHours() === currentHour,
+  );
+
+  if (startIndex === -1) return [];
+
+  // Grab the next `count` hours starting from next hour
+  return Array.from({ length: count }, (_, i) => {
+    const idx = startIndex + i + 1; // +1 = start from NEXT hour
+    if (idx >= weatherData.hourly.time.length) return null;
+
+    const time = new Date(weatherData.hourly.time[idx]);
+    const hour = time.getHours();
+    const period = hour >= 12 ? "PM" : "AM";
+    const displayHour = hour % 12 === 0 ? 12 : hour % 12;
+
+    return {
+      label: `${displayHour} ${period}`,
+      temp: Math.round(weatherData.hourly.temperature_2m[idx]),
+      rain: weatherData.hourly.precipitation_probability[idx],
+      code: weatherData.hourly.weathercode[idx],
+    };
+  }).filter(Boolean);
+}
 /* ── SMART SUGGESTIONS ── */
 function SmartSuggestions({ mlPrediction, weather }) {
   // ✅ IF ML EXISTS
@@ -387,7 +418,7 @@ function SmartSuggestions({ mlPrediction, weather }) {
     const now = new Date();
     const currentHour = now.getHours();
     const extra = getExtraAdvice(weather, mlPrediction);
-
+    const nextHours = getNextHours(weather, 4);
     const nextHour = (currentHour + 2) % 24;
     const laterHour = (currentHour + 4) % 24;
 
@@ -406,15 +437,17 @@ function SmartSuggestions({ mlPrediction, weather }) {
       },
       {
         icon: top1.emoji,
-        text: `${top1.label}`,
+        text: "Best activities now", // ← title for the card
         tag: "Best now",
         color: "green",
+        activities: mlPrediction.activity_suggestions, // ← pass all 3
       },
       {
-        icon: top2?.emoji,
-        text: `${top2.label}`,
-        tag: laterTag,
+        icon: "🕐",
+        text: "Coming hours",
+        tag: "Forecast",
         color: "amber",
+        forecast: nextHours,
       },
     ];
 
@@ -426,16 +459,101 @@ function SmartSuggestions({ mlPrediction, weather }) {
             <div key={i} className={`scard ${s.color}`}>
               <div className="sicon">{s.icon}</div>
               <div className="stxt">{s.text}</div>
-              {i === 2 && (
-                <div style={{ marginTop: 10, display: "flex", flexDirection: "column", gap: 5 }}>
-                  {mlPrediction.activity_suggestions.map((a, ai) => (
-                    <div key={ai} style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                      <span style={{ fontSize: 14 }}>{a.emoji}</span>
-                      <span style={{ fontSize: 12, fontWeight: 600, color: "var(--text)" }}>{a.label}</span>
+
+              {/* ── Card 3: clean activity list ── */}
+              {s.activities && (
+                <div style={{ margin: "8px 0 10px" }}>
+                  {s.activities.map((a, ai) => (
+                    <div
+                      key={ai}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 8,
+                        padding: "4px 0",
+                        borderBottom:
+                          ai < s.activities.length - 1
+                            ? "1px solid rgba(52,211,153,0.12)"
+                            : "none",
+                      }}
+                    >
+                      <span style={{ fontSize: 16 }}>{a.emoji}</span>
+                      <span
+                        style={{
+                          fontSize: 13,
+                          fontWeight: 600,
+                          fontFamily: "var(--font-d)",
+                          color: "var(--text)",
+                          flex: 1,
+                        }}
+                      >
+                        {a.label}
+                      </span>
                     </div>
                   ))}
                 </div>
               )}
+
+              {/* Card 4: hourly forecast rows */}
+              {s.forecast && (
+                <div style={{ margin: "8px 0 10px" }}>
+                  {s.forecast.map((h, hi) => (
+                    <div
+                      key={hi}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 6,
+                        padding: "4px 0",
+                        borderBottom:
+                          hi < s.forecast.length - 1
+                            ? "1px solid rgba(245,158,11,0.12)"
+                            : "none",
+                      }}
+                    >
+                      <span
+                        style={{
+                          fontSize: 11,
+                          fontWeight: 700,
+                          color: "var(--text3)",
+                          width: 36,
+                          fontFamily: "var(--font-d)",
+                        }}
+                      >
+                        {h.label}
+                      </span>
+                      <span style={{ fontSize: 15 }}>
+                        {describeWeather(h.code).emoji}
+                      </span>
+                      <span
+                        style={{
+                          fontSize: 13,
+                          fontWeight: 700,
+                          fontFamily: "var(--font-d)",
+                          flex: 1,
+                        }}
+                      >
+                        {h.temp}°
+                      </span>
+                      {h.rain > 0 && (
+                        <span
+                          style={{
+                            fontSize: 10,
+                            fontWeight: 700,
+                            color: "#38bdf8",
+                            background: "rgba(56,189,248,0.12)",
+                            borderRadius: 99,
+                            padding: "2px 6px",
+                          }}
+                        >
+                          💧{h.rain}%
+                        </span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+
               <span className={`stag ${s.color}`}>{s.tag}</span>
             </div>
           ))}
@@ -742,7 +860,7 @@ export default function App() {
     setCityError("");
     try {
       const res = await fetch(
-        `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(cityInput)}&count=1`
+        `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(cityInput)}&count=1`,
       );
       const data = await res.json();
       if (!data.results || data.results.length === 0) {
@@ -837,4 +955,3 @@ export default function App() {
     </>
   );
 }
-

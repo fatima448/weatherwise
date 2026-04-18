@@ -50,6 +50,28 @@
    .greet-name {
     font-size: 22px;
   }
+  .greet-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+  .city-search {
+    width: 100%;
+    align-items: stretch;
+  }
+  .city-search-row {
+    width: 100%;
+    justify-content: space-between;
+  }
+  .city-btn {
+    width: 100%;
+    
+  }
+
+  .city-input,
+  .city-input:focus {
+    width: 100%;
+  }
    .main-content {
     padding: 20px 10px;
   }
@@ -260,6 +282,87 @@ body {
   font-weight: 700;
   letter-spacing: 1px;
   text-transform: uppercase;
+}
+
+/* ── CITY SEARCH ── */
+.city-search {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+}
+
+.city-search-row {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  background: rgba(255, 255, 255, 0.45);
+  backdrop-filter: blur(12px);
+  border: 1.5px solid rgba(184, 152, 128, 0.2);
+  border-radius: 999px;
+  padding: 7px 8px 7px 16px;
+  transition: all 0.22s ease;
+  box-shadow: 0 2px 12px rgba(184, 152, 128, 0.08);
+}
+
+.city-search-row:focus-within {
+  border-color: var(--amber);
+  box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.1);
+  background: rgba(255, 255, 255, 0.65);
+}
+
+.city-input {
+  border: none;
+  background: transparent;
+  outline: none;
+  font-family: var(--font-d);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text2);
+  width: 130px;
+  transition: width 0.3s ease;
+}
+
+.city-input::placeholder {
+  color: var(--text3);
+  font-weight: 500;
+}
+
+.city-input:focus {
+  width: 180px;
+}
+
+.city-btn {
+  border: none;
+  background: rgba(245, 158, 11, 0.12);
+  color: var(--amber);
+  border-radius: 999px;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 13px;
+  flex-shrink: 0;
+  transition: background 0.18s;
+}
+
+.city-btn:hover {
+  background: rgba(245, 158, 11, 0.25);
+}
+
+.city-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.city-error {
+  font-size: 11px;
+  color: var(--red);
+  font-family: var(--font-d);
+  font-weight: 600;
+  padding: 0 6px;
 }
 
 /* WEATHER CARD */

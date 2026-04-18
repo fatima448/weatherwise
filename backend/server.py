@@ -299,7 +299,7 @@ def build_recommendation_text(clothing: str, umbrella: bool,
         "long_sleeves_light_layer":          "long sleeves with a light layer",
         "t_shirt_comfortable":               "comfortable t-shirt",
         "light_breathable_clothing":         "light, breathable clothing",
-        "very_light_clothing_stay_hydrated": "very light clothing — stay hydrated!",
+        "very_light_clothing_stay_hydrated": "very light clothing!",
     }
     advice = label_map.get(clothing, clothing.replace("_", " "))
     umbrella_text = " Don't forget your umbrella!" if umbrella else ""
