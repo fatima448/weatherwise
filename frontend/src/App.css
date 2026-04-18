@@ -52,7 +52,7 @@
   }
    .greet-row   { flex-direction: column; align-items: flex-start; gap: 12px; }
   .city-search { width: 100%; align-items: stretch; }
-  .city-search-row { width: 100%; }
+  .city-search-row { width: 100%; justify-content: space-between; }
   .city-input, .city-input:focus { width: 100%; }
 
    .main-content {
@@ -113,8 +113,17 @@ body {
 ::-webkit-scrollbar {
   width: 0;
 }
-
+.card-skeleton {
+  height: 200px;
+  border-radius: 20px;
+  background: linear-gradient(90deg, #eee, #ddd, #eee);
+  animation: shimmer 1.5s infinite;
+}
 /* ── ANIMATIONS ── */
+@keyframes shimmer {
+  0% { background-position: -200px 0; }
+  100% { background-position: 200px 0; }
+}
 @keyframes float {
   0%,
   100% {
@@ -488,7 +497,7 @@ body {
   font-size: 30px;
   font-weight: 700;
   margin-bottom: 3px;
-  opacity: 0.85;
+  opacity: 1;
   padding: 5px;
 }
 
