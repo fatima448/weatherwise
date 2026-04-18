@@ -382,7 +382,14 @@ function getExtraAdvice(weather, mlPrediction) {
 function SmartSuggestions({ mlPrediction, weather }) {
   // ✅ IF ML EXISTS
   if (mlPrediction && mlPrediction.activity_suggestions?.length > 0) {
+    const top1 = mlPrediction.activity_suggestions[0];
+    const top2 = mlPrediction.activity_suggestions[1];
+    const now = new Date();
+    const currentHour = now.getHours();
     const extra = getExtraAdvice(weather, mlPrediction);
+
+    const nextHour = (currentHour + 2) % 24;
+    const laterHour = (currentHour + 4) % 24;
 
     const suggestions = [
       {
@@ -394,19 +401,19 @@ function SmartSuggestions({ mlPrediction, weather }) {
       {
         icon: extra.icon,
         text: extra.text,
-        tag: extra.tag,
+        tag: "Today",
         color: "blue",
       },
       {
-        icon: "🏅",
-        text: "Best Activities",
+        icon: top1.emoji,
+        text: `${top1.label}`,
         tag: "Best now",
         color: "green",
       },
       {
-        icon: "💡",
-        text: mlPrediction.recommendation_text,
-        tag: mlPrediction.season.charAt(0).toUpperCase() + mlPrediction.season.slice(1),
+        icon: top2?.emoji,
+        text: `${top2.label}`,
+        tag: laterTag,
         color: "amber",
       },
     ];
@@ -725,27 +732,32 @@ export default function App() {
 
   const [lat, setLat] = useState(41.01);
   const [lon, setLon] = useState(28.97);
-  const [locating, setLocating] = useState(false);
-  const [locError, setLocError] = useState("");
+  const [cityInput, setCityInput] = useState("");
+  const [citySearching, setCitySearching] = useState(false);
+  const [cityError, setCityError] = useState("");
 
-  const useMyLocation = () => {
-    if (!navigator.geolocation) {
-      setLocError("Geolocation not supported by your browser.");
-      return;
-    }
-    setLocating(true);
-    setLocError("");
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        setLat(pos.coords.latitude);
-        setLon(pos.coords.longitude);
-        setLocating(false);
-      },
-      () => {
-        setLocError("Location access denied.");
-        setLocating(false);
+  const searchCity = async () => {
+    if (!cityInput.trim()) return;
+    setCitySearching(true);
+    setCityError("");
+    try {
+      const res = await fetch(
+        `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(cityInput)}&count=1`
+      );
+      const data = await res.json();
+      if (!data.results || data.results.length === 0) {
+        setCityError("City not found. Try another name.");
+        setCitySearching(false);
+        return;
       }
-    );
+      const { latitude, longitude } = data.results[0];
+      setLat(latitude);
+      setLon(longitude);
+      setCityInput("");
+    } catch {
+      setCityError("Search failed. Check your connection.");
+    }
+    setCitySearching(false);
   };
 
   useEffect(() => {
@@ -794,15 +806,24 @@ export default function App() {
               </div>
             </div>
             <div className="city-search">
-              <button
-                className="city-btn"
-                onClick={useMyLocation}
-                disabled={locating}
-                title="Use my current location"
-              >
-                {locating ? "…" : "📍 My Location"}
-              </button>
-              {locError && <div className="city-error">{locError}</div>}
+              <div className="city-search-row">
+                <input
+                  className="city-input"
+                  type="text"
+                  placeholder="Search city…"
+                  value={cityInput}
+                  onChange={(e) => setCityInput(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && searchCity()}
+                />
+                <button
+                  className="city-btn"
+                  onClick={searchCity}
+                  disabled={citySearching}
+                >
+                  {citySearching ? "…" : "🔍"}
+                </button>
+              </div>
+              {cityError && <div className="city-error">{cityError}</div>}
             </div>
           </div>
 
