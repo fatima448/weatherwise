@@ -2,9 +2,9 @@
 WeatherWise ML Backend — v3.0
 ==============================
 FastAPI server that:
-  1. Loads clothing + umbrella models (UNCHANGED)
+  1. Loads clothing + umbrella models 
   2. Loads the NEW activity scoring model (GradientBoostingRegressor)
-  3. POST /predict      → clothing + umbrella (unchanged)
+  3. POST /predict      → clothing + umbrella 
   4. POST /predict/all  → clothing + umbrella + top-3 activity suggestions
 
 Run:
@@ -27,7 +27,7 @@ from pydantic import BaseModel
 # ── Config ─────────────────────────────────────────────────────────────────
 MODEL_DIR = Path(__file__).parent / "models"
 
-# Clothing + umbrella (UNTOUCHED)
+# Clothing + umbrella 
 CLOTHING_MODEL_PATH = MODEL_DIR / "clothing_model.pkl"
 UMBRELLA_MODEL_PATH = MODEL_DIR / "umbrella_model.pkl"
 ENCODER_PATH        = MODEL_DIR / "label_encoders.pkl"
@@ -172,7 +172,7 @@ def parse_open_meteo(raw: dict, now: datetime.datetime) -> dict:
     }
 
 
-# ── Helper: Clothing/Umbrella feature vector (UNCHANGED) ───────────────────
+# ── Helper: Clothing/Umbrella feature vector  ───────────────────
 def build_clothing_features(w: dict) -> np.ndarray:
     h = w["hour_of_day"]
     m = w["month"]
