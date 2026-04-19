@@ -34,7 +34,7 @@
   .rpanel {
     flex: 1 1 100%;
   }
-    .rpanel {
+  .rpanel {
     padding: 20px 10px;
   }
 
@@ -47,15 +47,28 @@
     grid-template-columns: 1fr;
     text-align: center;
   }
-   .greet-name {
+  .greet-name {
     font-size: 22px;
   }
-   .greet-row   { flex-direction: column; align-items: flex-start; gap: 12px; }
-  .city-search { width: 100%; align-items: stretch; }
-  .city-search-row { width: 100%; justify-content: space-between; }
-  .city-input, .city-input:focus { width: 100%; }
+  .greet-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+  .city-search {
+    width: 100%;
+    align-items: stretch;
+  }
+  .city-search-row {
+    width: 100%;
+    justify-content: space-between;
+  }
+  .city-input,
+  .city-input:focus {
+    width: 100%;
+  }
 
-   .main-content {
+  .main-content {
     padding: 20px 10px;
   }
 
@@ -89,6 +102,9 @@
   .sgrid {
     grid-template-columns: 1fr;
   }
+  .scard.span2 {
+    grid-column: span 1;
+  }
 }
 /* ── RESET ── */
 * {
@@ -99,15 +115,21 @@
 
 body {
   font-family: "Onest", sans-serif;
-   background: linear-gradient(135deg, #dbeafe, #fef3c7, #e0f2fe);
+  background: linear-gradient(135deg, #dbeafe, #fef3c7, #e0f2fe);
   background-size: 300% 300%;
   animation: bgMove 12s ease infinite;
 }
 
 @keyframes bgMove {
-  0% { background-position: 0% 50%; }
-  50% { background-position: 100% 50%; }
-  100% { background-position: 0% 50%; }
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
 }
 
 ::-webkit-scrollbar {
@@ -121,8 +143,12 @@ body {
 }
 /* ── ANIMATIONS ── */
 @keyframes shimmer {
-  0% { background-position: -200px 0; }
-  100% { background-position: 200px 0; }
+  0% {
+    background-position: -200px 0;
+  }
+  100% {
+    background-position: 200px 0;
+  }
 }
 @keyframes float {
   0%,
@@ -239,7 +265,7 @@ body {
 .greet-container {
   display: flex;
   flex-direction: column;
-  align-items: flex-start; 
+  align-items: flex-start;
 }
 .greet-name {
   font-family: var(--font-d);
@@ -256,7 +282,7 @@ body {
 }
 .greet-date {
   font-size: 14px;
-  color: #9A8C7B; /* soft warm tone matching your theme */
+  color: #9a8c7b; /* soft warm tone matching your theme */
   margin-top: 4px;
   letter-spacing: 0.5px;
 }
@@ -281,7 +307,7 @@ body {
   font-weight: 700;
   letter-spacing: 0.5px;
 }
- 
+
 /* City search bar */
 .city-search {
   display: flex;
@@ -289,7 +315,7 @@ body {
   align-items: flex-end;
   gap: 6px;
 }
- 
+
 .city-search-row {
   display: flex;
   align-items: center;
@@ -301,13 +327,13 @@ body {
   transition: all 0.22s ease;
   box-shadow: 0 2px 12px rgba(184, 152, 128, 0.08);
 }
- 
+
 .city-search-row:focus-within {
   border-color: var(--amber);
   box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.1);
   background: rgba(255, 255, 255, 0.65);
 }
- 
+
 .city-input {
   border: none;
   background: transparent;
@@ -319,10 +345,15 @@ body {
   width: 130px;
   transition: width 0.3s ease;
 }
- 
-.city-input::placeholder { color: var(--text3); font-weight: 500; }
-.city-input:focus         { width: 180px; }
- 
+
+.city-input::placeholder {
+  color: var(--text3);
+  font-weight: 500;
+}
+.city-input:focus {
+  width: 180px;
+}
+
 .city-btn {
   border: none;
   background: rgba(245, 158, 11, 0.12);
@@ -338,10 +369,15 @@ body {
   flex-shrink: 0;
   transition: background 0.18s;
 }
- 
-.city-btn:hover    { background: rgba(245, 158, 11, 0.25); }
-.city-btn:disabled { opacity: 0.5; cursor: not-allowed; }
- 
+
+.city-btn:hover {
+  background: rgba(245, 158, 11, 0.25);
+}
+.city-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 .city-error {
   font-size: 11px;
   color: var(--red);
@@ -349,12 +385,12 @@ body {
   font-weight: 600;
   padding: 0 6px;
 }
- 
+
 /* WEATHER CARD */
 
 .wcard {
   border-radius: 22px;
- padding: clamp(14px, 2vw, 26px);
+  padding: clamp(14px, 2vw, 26px);
   border: 1px solid var(--bdr2);
   position: relative;
   overflow: hidden;
@@ -537,6 +573,20 @@ body {
   position: relative;
   overflow: hidden;
 }
+.scard.span2 {
+  grid-column: span 2;
+}
+
+/* ── Red alert card color ── */
+.scard.red {
+  background: rgba(248, 113, 113, 0.08);
+  border-color: rgba(248, 113, 113, 0.25);
+}
+
+.stag.red {
+  background: rgba(248, 113, 113, 0.2);
+  color: var(--red);
+}
 
 .scard:hover {
   transform: translateY(-3px);
@@ -619,13 +669,12 @@ body {
   overflow-y: auto;
   display: flex;
   flex-direction: column;
-  height: 100vh;
+  max-height: 100vh;
   flex: 0.8;
   min-width: 280px;
-  height: 100vh;
 }
 
-.task-title{
+.task-title {
   font-family: var(--font-d);
   font-size: 18px;
   font-weight: 700;
@@ -773,7 +822,7 @@ body {
   font-size: 12px;
 }
 .tbtn.delete {
-   margin-left: auto;
+  margin-left: auto;
 
   border: none;
   background: rgba(255, 255, 255, 0.06);
@@ -783,12 +832,11 @@ body {
   transition: 0.2s;
 }
 
-
-.tbtn.delete,.tbtn.doneb:hover {
+.tbtn.delete,
+.tbtn.doneb:hover {
   opacity: 0.6;
   transform: scale(1);
 }
-
 
 .titem:hover .delete-btn {
   opacity: 1;
@@ -856,14 +904,14 @@ body {
 }
 
 .type-btn.active {
-  background: #DFF7E2;
-  border-color: #4CAF50;
-  color: #2E7D32;
+  background: #dff7e2;
+  border-color: #4caf50;
+  color: #2e7d32;
 }
 .confirm-btn {
   border: none;
   background: rgba(16, 185, 129, 0.15);
-  color: #10B981;
+  color: #10b981;
 
   border-radius: 10px;
   padding: 6px 10px;
@@ -945,13 +993,10 @@ body {
   animation: fadeUp 0.22s ease;
 }
 /* ── WeatherChat — append these styles to the bottom of App.css ── */
-
 .wchat {
-  border-radius: 14px;
-  border: 1px solid rgba(255,255,255,0.1);
-  background: rgba(255,255,255,0.05);
-  overflow: hidden;
-  margin-top: 4px;
+  margin-top: auto;
+  background: rgba(255,255,255,0.1);
+  backdrop-filter: blur(10px);
 }
 
 .wchat-header {
@@ -959,10 +1004,12 @@ body {
   align-items: center;
   gap: 8px;
   padding: 10px 14px;
-  border-bottom: 1px solid rgba(255,255,255,0.08);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
 
-.wchat-icon { font-size: 16px; }
+.wchat-icon {
+  font-size: 16px;
+}
 
 .wchat-title {
   font-size: 13px;
@@ -987,7 +1034,7 @@ body {
   flex-direction: column;
   gap: 8px;
   scrollbar-width: thin;
-  scrollbar-color: rgba(255,255,255,0.1) transparent;
+  scrollbar-color: rgba(255, 255, 255, 0.1) transparent;
 }
 
 .wchat-msg {
@@ -1023,9 +1070,9 @@ body {
   font-size: 12.5px;
   line-height: 1.55;
   font-family: var(--font-s);
-  background: rgba(255,255,255,0.07);
+  background: rgba(255, 255, 255, 0.07);
   color: var(--text);
-  border: 1px solid rgba(255,255,255,0.08);
+  border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .wchat-msg.user .wchat-bubble {
@@ -1048,12 +1095,22 @@ body {
   background: #9ca3af;
   animation: wchat-bounce 1.2s infinite;
 }
-.wchat-typing span:nth-child(2) { animation-delay: .2s; }
-.wchat-typing span:nth-child(3) { animation-delay: .4s; }
+.wchat-typing span:nth-child(2) {
+  animation-delay: 0.2s;
+}
+.wchat-typing span:nth-child(3) {
+  animation-delay: 0.4s;
+}
 
 @keyframes wchat-bounce {
-  0%,60%,100% { transform: translateY(0); }
-  30% { transform: translateY(-4px); }
+  0%,
+  60%,
+  100% {
+    transform: translateY(0);
+  }
+  30% {
+    transform: translateY(-4px);
+  }
 }
 
 /* Quick-prompt chips */
@@ -1068,8 +1125,8 @@ body {
   font-size: 11px;
   padding: 4px 10px;
   border-radius: 99px;
-  border: 1px solid rgba(255,255,255,0.12);
-  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.05);
   color: var(--text2);
   cursor: pointer;
   transition: background 0.15s;
@@ -1077,7 +1134,7 @@ body {
   white-space: nowrap;
 }
 .wchat-chip:hover {
-  background: rgba(255,255,255,0.12);
+  background: rgba(255, 255, 255, 0.12);
   color: var(--text);
 }
 
@@ -1086,20 +1143,20 @@ body {
   display: flex;
   gap: 6px;
   padding: 8px 10px;
-  border-top: 1px solid rgba(255,255,255,0.08);
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
   align-items: flex-end;
 }
 
 .wchat-input {
   flex: 1;
   resize: none;
-  border: 1px solid rgba(255,255,255,0.12);
+  border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 10px;
   padding: 8px 11px;
   font-size: 12.5px;
   font-family: var(--font-s);
   color: var(--text);
-  background: rgba(255,255,255,0.06);
+  background: rgba(255, 255, 255, 0.06);
   min-height: 36px;
   max-height: 100px;
   outline: none;
@@ -1107,9 +1164,11 @@ body {
 }
 .wchat-input:focus {
   border-color: rgba(99, 102, 241, 0.5);
-  background: rgba(255,255,255,0.09);
+  background: rgba(255, 255, 255, 0.09);
 }
-.wchat-input::placeholder { color: var(--text2); }
+.wchat-input::placeholder {
+  color: var(--text2);
+}
 
 .wchat-send {
   width: 34px;
@@ -1124,7 +1183,9 @@ body {
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  transition: opacity 0.15s, background 0.15s;
+  transition:
+    opacity 0.15s,
+    background 0.15s;
 }
 .wchat-send:hover:not(:disabled) {
   background: rgba(99, 102, 241, 0.6);

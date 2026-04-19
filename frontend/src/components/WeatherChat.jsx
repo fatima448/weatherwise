@@ -16,10 +16,10 @@ export default function WeatherChat({ tasks, weather }) {
       text: "Hey! I can see your tasks and today's forecast. Ask me anything — conflicts, best times, what to wear, or anything else.",
     },
   ]);
-  const [input, setInput]     = useState("");
+  const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
-  const bottomRef             = useRef(null);
-  const textareaRef           = useRef(null);
+  const bottomRef = useRef(null);
+  const textareaRef = useRef(null);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -50,7 +50,10 @@ export default function WeatherChat({ tasks, weather }) {
     } catch {
       setMessages((prev) => [
         ...prev,
-        { role: "model", text: "Connection error — check your Gemini API key in .env" },
+        {
+          role: "model",
+          text: "Connection error — check your Gemini API key in .env",
+        },
       ]);
     }
     setLoading(false);
@@ -79,7 +82,10 @@ export default function WeatherChat({ tasks, weather }) {
 
       <div className="wchat-msgs" id="wchat-msgs">
         {messages.map((m, i) => (
-          <div key={i} className={`wchat-msg ${m.role === "user" ? "user" : "bot"}`}>
+          <div
+            key={i}
+            className={`wchat-msg ${m.role === "user" ? "user" : "bot"}`}
+          >
             {m.role !== "user" && <div className="wchat-avatar">W</div>}
             <div className="wchat-bubble">{m.text}</div>
           </div>
@@ -89,7 +95,9 @@ export default function WeatherChat({ tasks, weather }) {
           <div className="wchat-msg bot">
             <div className="wchat-avatar">W</div>
             <div className="wchat-bubble wchat-typing">
-              <span /><span /><span />
+              <span />
+              <span />
+              <span />
             </div>
           </div>
         )}

@@ -5,8 +5,8 @@ export function getWeatherTheme(code, isDay) {
   if (code === 0)
     return {
       bg: isDay
-        ? "linear-gradient(135deg, #FFD700, #FFA500)" // day
-        : "linear-gradient(135deg, #1e3a8a, #3730a3)", // night (soft blue/purple)
+        ? "linear-gradient(135deg, #FFD700, #FFA500)"
+        : "linear-gradient(135deg, #1e3a8a, #3730a3)",
       accent: isDay ? "#F59E0B" : "#c4b5fd",
       text: isDay ? "#1A0F00" : "#F1F5F9",
       condColor: isDay ? "#F59E0B" : "#ddd6fe",
@@ -62,67 +62,17 @@ export function getWeatherTheme(code, isDay) {
 }
 
 export function describeWeather(code, isDay) {
-  if (code === 0) {
-    return {
-      text: "Clear sky",
-      emoji: isDay ? "☀️" : "🌙",
-    };
-  }
-
-  if (code <= 2) {
-    return {
-      text: "Partly cloudy",
-      emoji: isDay ? "⛅" : "☁️",
-    };
-  }
-
-  if (code === 3) {
-    return {
-      text: "Overcast",
-      emoji: "☁️",
-    };
-  }
-
-  if (code <= 49) {
-    return {
-      text: "Foggy",
-      emoji: "🌫️",
-    };
-  }
-
-  if (code <= 67) {
-    return {
-      text: "Rainy",
-      emoji: "🌧️",
-    };
-  }
-
-  if (code <= 77) {
-    return {
-      text: "Snowy",
-      emoji: "❄️",
-    };
-  }
-
-  if (code <= 82) {
-    return {
-      text: "Showers",
-      emoji: isDay ? "🌦️" : "🌧️",
-    };
-  }
-
-  if (code <= 99) {
-    return {
-      text: "Thunderstorm",
-      emoji: "⛈️",
-    };
-  }
-
-  return {
-    text: "Unknown",
-    emoji: "🌡️",
-  };
+  if (code === 0) return { text: "Clear sky",     emoji: isDay ? "☀️" : "🌙" };
+  if (code <= 2)  return { text: "Partly cloudy", emoji: isDay ? "⛅" : "☁️" };
+  if (code === 3) return { text: "Overcast",       emoji: "☁️" };
+  if (code <= 49) return { text: "Foggy",          emoji: "☁️" };
+  if (code <= 67) return { text: "Rainy",          emoji: "🌧️" };
+  if (code <= 77) return { text: "Snowy",          emoji: "❄️" };
+  if (code <= 82) return { text: "Showers",        emoji: isDay ? "🌦️" : "🌧️" };
+  if (code <= 99) return { text: "Thunderstorm",   emoji: "⛈️" };
+  return { text: "Unknown", emoji: "🌡️" };
 }
+
 export function getLocalHour(timezone) {
   return Number(
     new Date().toLocaleString("en-US", {
@@ -132,8 +82,9 @@ export function getLocalHour(timezone) {
     })
   );
 }
+
 export function getGreeting(hour) {
-  if (hour >= 5 && hour < 12) return "Good Morning";
+  if (hour >= 5  && hour < 12) return "Good Morning";
   if (hour >= 12 && hour < 17) return "Good Afternoon";
   if (hour >= 17 && hour < 22) return "Good Evening";
   return "Good Night";
@@ -155,79 +106,92 @@ export function formatTime(time) {
 }
 
 // ── Umbrella: check BOTH ML prediction AND raw weather code ───────────────
-// The ML model sometimes misses rain — this adds a hard rule fallback
 export function shouldBringUmbrella(mlPrediction, weatherCode) {
-  // Hard rule: if it's actually raining/drizzling/storming right now → always umbrella
   const isRainingNow = weatherCode >= 51 && weatherCode <= 99;
   return isRainingNow || mlPrediction?.umbrella_needed === true;
 }
 
-// ── Extra advice card (card 2) ────────────────────────────────────────────
+// ── Extra advice card ─────────────────────────────────────────────────────
 export function getExtraAdvice(weather, mlPrediction) {
   const temp = weather?.current?.temperature_2m ?? 0;
-  const uv = weather?.current?.uv_index ?? 0;
+  const uv   = weather?.current?.uv_index ?? 0;
   const code = weather?.current?.weathercode ?? 0;
 
-  // Always check actual weather code first — don't trust ML alone for rain
   if (shouldBringUmbrella(mlPrediction, code))
-    return { icon: "☔", text: "Take an umbrella", tag: "Now", color: "blue" };
+    return { icon: "☔", text: "Take an umbrella", tag: "Now",   color: "blue"  };
   if (uv >= 6)
-    return { icon: "🧴", text: "Use sunscreen", tag: "Now", color: "amber" };
+    return { icon: "🧴", text: "Use sunscreen",    tag: "Now",   color: "amber" };
   if (uv >= 3)
-    return {
-      icon: "🕶️",
-      text: "Sunglasses will help",
-      tag: "Now",
-      color: "amber",
-    };
+    return { icon: "🕶️", text: "Sunglasses will help", tag: "Now", color: "amber" };
   if (temp >= 28)
-    return { icon: "💧", text: "Stay hydrated", tag: "Now", color: "blue" };
-  return {
-    icon: "🌤️",
-    text: "No umbrella needed",
-    tag: "Today",
-    color: "blue",
-  };
+    return { icon: "💧", text: "Stay hydrated",    tag: "Now",   color: "blue"  };
+  return   { icon: "🌤️", text: "No umbrella needed", tag: "Today", color: "blue" };
 }
 
-// ── Weather alert for the next 6 hours (card 4) ───────────────────────────
-export function getWeatherAlert(weatherData) {
+// ── Weather alert — looks at the next 1–6 hours using the city's timezone ─
+//
+// HOW IT WORKS:
+// 1. Use the city's IANA timezone (passed in from App) to find what hour
+//    it currently is *in that city* — not your local browser time.
+// 2. Find that hour's index inside the hourly forecast array.
+// 3. Read the current conditions (temp, rain chance, weathercode).
+// 4. Loop through the next 6 hours and check for anything worth alerting:
+//      • Rain coming   → precipitation_probability jumps to 60%+
+//      • Thunderstorm  → weathercode 95–99
+//      • Temperature   → drops 5°+ within 6 hours
+//      • Strong wind   → windspeed jumps above 40 km/h
+//      • Snow          → weathercode 71–77 when it wasn't snowing before
+// 5. Return the FIRST (soonest) alert found, or "All clear" if nothing.
+//
+// WHY TIMEZONE MATTERS:
+// Open-Meteo timestamps are in the city's local time, not UTC.
+// If you're in Istanbul checking London weather, the hours would be
+// offset by 2–3 hours without this fix — you'd be reading the wrong slot.
+
+export function getWeatherAlert(weatherData, timezone) {
   if (!weatherData?.hourly) return null;
 
-  const now = new Date();
-  const currentHour = now.getHours();
+  // ── Step 1: find current local hour in the city's timezone ──────────────
+  const tz = timezone || Intl.DateTimeFormat().resolvedOptions().timeZone;
+  const localHour = Number(
+    new Intl.DateTimeFormat("en-US", {
+      timeZone: tz,
+      hour: "numeric",
+      hour12: false,
+    }).format(new Date())
+  );
+
+  // ── Step 2: find that hour in the hourly array ───────────────────────────
+  // Open-Meteo timestamps look like "2025-04-20T14:00" — local to the city
   const startIndex = weatherData.hourly.time.findIndex(
-    (t) => new Date(t).getHours() === currentHour,
+    (t) => new Date(t).getHours() === localHour
   );
   if (startIndex === -1) return null;
 
+  // ── Step 3: snapshot current conditions to compare against ───────────────
   const currentTemp = weatherData.hourly.temperature_2m[startIndex];
   const currentCode = weatherData.hourly.weathercode[startIndex];
-  const currentRain = weatherData.hourly.precipitation_probability[startIndex];
+  const currentRain = weatherData.hourly.precipitation_probability[startIndex] ?? 0;
+  const currentWind = weatherData.hourly.windspeed_10m?.[startIndex] ?? 0;
 
+  // ── Step 4: scan the next 6 hours for the first notable change ───────────
   for (let i = 1; i <= 6; i++) {
     const idx = startIndex + i;
     if (idx >= weatherData.hourly.time.length) break;
 
-    const time = new Date(weatherData.hourly.time[idx]);
-    const h = time.getHours();
-    const period = h >= 12 ? "PM" : "AM";
-    const display = `${h % 12 === 0 ? 12 : h % 12} ${period}`;
+    // Format a friendly time label e.g. "3 PM"
+    const hour    = new Date(weatherData.hourly.time[idx]).getHours();
+    const display = `${hour % 12 === 0 ? 12 : hour % 12} ${hour >= 12 ? "PM" : "AM"}`;
 
     const temp = weatherData.hourly.temperature_2m[idx];
-    const rain = weatherData.hourly.precipitation_probability[idx];
+    const rain = weatherData.hourly.precipitation_probability[idx] ?? 0;
     const code = weatherData.hourly.weathercode[idx];
     const wind = weatherData.hourly.windspeed_10m?.[idx] ?? 0;
+    const precip = weatherData.hourly.precipitation?.[idx] ?? 0; // actual mm
+
     const tempDrop = currentTemp - temp;
 
-    if (rain >= 60 && currentRain < 40)
-      return {
-        icon: "🌧️",
-        title: "Rain coming",
-        body: `${rain}% chance of rain around ${display}`,
-        tag: "Heads up",
-        color: "blue",
-      };
+    // ── Thunderstorm (highest priority) ─────────────────────────────────
     if (code >= 95)
       return {
         icon: "⛈️",
@@ -236,22 +200,19 @@ export function getWeatherAlert(weatherData) {
         tag: "Warning",
         color: "red",
       };
-    if (tempDrop >= 5)
+
+    // ── Rain: probability jumps AND actual precipitation expected ────────
+    // Both conditions together avoid false alarms from low-mm drizzle
+    if (rain >= 60 && currentRain < 40 && precip >= 0.5)
       return {
-        icon: "🥶",
-        title: "Temperature dropping",
-        body: `Drops ${Math.round(tempDrop)}° colder by ${display}`,
+        icon: "🌧️",
+        title: "Rain on the way",
+        body: `${rain}% chance of rain around ${display} — grab an umbrella`,
         tag: "Heads up",
         color: "blue",
       };
-    if (wind > 40 && (weatherData.hourly.windspeed_10m?.[startIndex] ?? 0) < 25)
-      return {
-        icon: "💨",
-        title: "Strong winds ahead",
-        body: `Wind picks up significantly around ${display}`,
-        tag: "Heads up",
-        color: "amber",
-      };
+
+    // ── Snow ─────────────────────────────────────────────────────────────
     if (code >= 71 && code <= 77 && currentCode < 71)
       return {
         icon: "❄️",
@@ -260,8 +221,29 @@ export function getWeatherAlert(weatherData) {
         tag: "Warning",
         color: "blue",
       };
+
+    // ── Temperature drop ─────────────────────────────────────────────────
+    if (tempDrop >= 5)
+      return {
+        icon: "🥶",
+        title: "Temperature dropping",
+        body: `Gets ${Math.round(tempDrop)}° colder by ${display} — layer up`,
+        tag: "Heads up",
+        color: "blue",
+      };
+
+    // ── Strong wind ──────────────────────────────────────────────────────
+    if (wind > 40 && currentWind < 25)
+      return {
+        icon: "💨",
+        title: "Strong winds ahead",
+        body: `Wind picks up significantly around ${display}`,
+        tag: "Heads up",
+        color: "amber",
+      };
   }
 
+  // ── Step 5: nothing found → all clear ───────────────────────────────────
   return {
     icon: "✅",
     title: "Weather looks stable",
@@ -272,26 +254,17 @@ export function getWeatherAlert(weatherData) {
 }
 
 // ── Activity suggestions: re-evaluate based on ACTUAL weather ─────────────
-// If weather is rainy/stormy, filter out outdoor activities
 const OUTDOOR_ACTIVITIES = new Set([
-  "running",
-  "cycling",
-  "walking",
-  "picnic",
-  "sports",
-  "outdoor_work",
+  "running", "cycling", "walking", "picnic", "sports", "outdoor_work",
 ]);
 
 export function filterActivitiesByWeather(activitySuggestions, weatherCode) {
-  const isBadWeather = weatherCode >= 51; // drizzle or worse
+  const isBadWeather = weatherCode >= 51;
+  if (!isBadWeather) return activitySuggestions;
 
-  if (!isBadWeather) return activitySuggestions; // all good, show ML results as-is
-
-  // In bad weather: demote outdoor activities, promote indoor ones
   return activitySuggestions
     .map((a) => ({
       ...a,
-      // Reduce confidence of outdoor activities in rain
       confidence: OUTDOOR_ACTIVITIES.has(a.activity)
         ? a.confidence * 0.3
         : a.confidence * 1.2,
