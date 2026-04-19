@@ -173,7 +173,7 @@ export default function App() {
           <SmartSuggestions mlPrediction={mlPred} weather={weather} />
         </main>
  
-        <ReschedulePanel toast={setToast} lat={lat} lon={lon} />
+        <ReschedulePanel toast={setToast} lat={lat} lon={lon} weather={weather} />
       </div>
     </>
   );

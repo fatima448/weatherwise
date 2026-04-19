@@ -1,8 +1,10 @@
 // src/components/ReschedulePanel.jsx
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { getForecastAtHour } from "../services/weather";
+import { classifyTaskConflict, generateInsights } from "../services/gemini";
 import { formatTime } from "../utils/weatherHelpers";
 import { EMOJIS } from "../data/emojiMap";
+import WeatherChat from "./WeatherChat";
 
 const DEFAULT_TASKS = [
   { id: 1, label: "Evening Run",   time: "6:00 PM", hour: 18, icon: "🏃", conflict: true,  conflictReason: "Rain expected during your run",       fix: "Daytime is more suitable" },
@@ -12,9 +14,10 @@ const DEFAULT_TASKS = [
   { id: 5, label: "Dinner Out",    time: "7:30 PM", hour: 19, icon: "🍽️", conflict: true,  conflictReason: "Wind conditions worsen in the evening", fix: "Avoid later hours" },
 ];
 
-const STATIC_INSIGHTS = [
+const FALLBACK_INSIGHTS = [
   { icon: "💧", body: "Stay hydrated — warm day, drink extra water" },
-  { icon: "⏰", body: "Best productivity time is 2–5 PM" },
+  { icon: "⏰", body: "Best productivity window is 2–5 PM" },
+  { icon: "🌤️", body: "Check back later for evening forecast updates" },
 ];
 
 /* ── Single task item ── */
@@ -83,13 +86,26 @@ function RescheduleItem({ item, onResolve, onDelete, toast }) {
 }
 
 /* ── Panel ── */
-export default function ReschedulePanel({ toast, lat, lon }) {
-  const [items, setItems]     = useState(DEFAULT_TASKS);
+export default function ReschedulePanel({ toast, lat, lon, weather }) {
+  const [items, setItems]       = useState(DEFAULT_TASKS);
   const [newLabel, setNewLabel] = useState("");
   const [newTime, setNewTime]   = useState("");
   const [showForm, setShowForm] = useState(false);
-  const [type, setType]         = useState("outdoor");
   const [adding, setAdding]     = useState(false);
+  const [insights, setInsights] = useState(FALLBACK_INSIGHTS);
+  const [insightsLoading, setInsightsLoading] = useState(false);
+
+  // ── Generate insights when weather data arrives ──────────────────────
+  useEffect(() => {
+    if (!weather) return;
+    setInsightsLoading(true);
+    generateInsights(weather, items)
+      .then((data) => {
+        if (Array.isArray(data) && data.length) setInsights(data);
+      })
+      .catch(() => {/* keep fallback */})
+      .finally(() => setInsightsLoading(false));
+  }, [weather]); // only re-run when weather changes, not on every task update
 
   const deleteItem = (id) => {
     setItems((prev) => prev.filter((i) => i.id !== id));
@@ -103,14 +119,33 @@ export default function ReschedulePanel({ toast, lat, lon }) {
     toast("Rescheduled successfully");
   };
 
+  // ── Add new task — Gemini classifies it and checks weather conflict ──
   const addPlan = async () => {
     if (!newLabel || !newTime) { toast("Please enter activity and time"); return; }
     setAdding(true);
 
     const [h] = newTime.split(":").map(Number);
-    let conflict = false, conflictReason = null, fix = "";
+    let conflict = false, conflictReason = null, fix = "", icon = "🌳";
 
-    if (type === "outdoor") {
+    try {
+      // Step 1: get the real hourly forecast for that time slot
+      const forecast = await getForecastAtHour(lat, lon, h);
+
+      // Step 2: ask Gemini — is this outdoor? is there a conflict?
+      const result = await classifyTaskConflict(newLabel, h, forecast);
+
+      if (result.isOutdoor && result.hasConflict) {
+        conflict = true;
+        conflictReason = result.conflictReason;
+        fix = result.suggestedFix;
+      }
+
+      // Use Gemini's emoji suggestion, fall back to EMOJIS map, then default
+      icon = result.emoji || EMOJIS[newLabel.toLowerCase()] || (result.isOutdoor ? "🌳" : "🏠");
+
+    } catch (e) {
+      // Gemini failed — fall back to the old rule-based logic
+      console.warn("Gemini classification failed, using fallback", e);
       try {
         const forecast = await getForecastAtHour(lat, lon, h);
         if (forecast) {
@@ -124,21 +159,21 @@ export default function ReschedulePanel({ toast, lat, lon }) {
             fix = "Consider rescheduling to a better time window";
           }
         }
-      } catch (e) { console.warn("Forecast check failed", e); }
+      } catch {/* silent */}
+      icon = EMOJIS[newLabel.toLowerCase()] || "🌳";
     }
 
     const newItem = {
       id: Date.now(), label: newLabel,
       time: formatTime(newTime), hour: h,
-      icon: EMOJIS[newLabel.toLowerCase()] || (type === "outdoor" ? "🌳" : "🏠"),
-      type, conflict, conflictReason, fix,
+      icon, conflict, conflictReason, fix,
     };
 
     setItems((prev) => [...prev, newItem]);
     if (conflict) toast(`⚠️ ${conflictReason}`);
     else toast("Plan added ✅");
 
-    setNewLabel(""); setNewTime(""); setType("outdoor"); setShowForm(false); setAdding(false);
+    setNewLabel(""); setNewTime(""); setShowForm(false); setAdding(false);
   };
 
   return (
@@ -161,12 +196,14 @@ export default function ReschedulePanel({ toast, lat, lon }) {
             onChange={(e) => setNewTime(e.target.value)}
             style={{ marginBottom: 8 }}
           />
-          <div style={{ display: "flex", gap: 10, marginBottom: 10 }}>
-            <button className={`type-btn ${type === "indoor" ? "active" : ""}`} onClick={() => setType("indoor")}>🏠 Indoor</button>
-            <button className={`type-btn ${type === "outdoor" ? "active" : ""}`} onClick={() => setType("outdoor")}>🌳 Outdoor</button>
-          </div>
+          {/* No indoor/outdoor toggle — Gemini figures it out automatically */}
           <div style={{ display: "flex", gap: 8 }}>
-            <button className="confirm-btn" style={{ flex: 1, opacity: adding ? 0.6 : 1 }} onClick={addPlan} disabled={adding}>
+            <button
+              className="confirm-btn"
+              style={{ flex: 1, opacity: adding ? 0.6 : 1 }}
+              onClick={addPlan}
+              disabled={adding}
+            >
               {adding ? "Checking weather…" : "✔ Add Plan"}
             </button>
             <button className="tbtn doneb" onClick={() => { setShowForm(false); setNewLabel(""); setNewTime(""); }}>
@@ -179,13 +216,23 @@ export default function ReschedulePanel({ toast, lat, lon }) {
       )}
 
       <hr className="idivider" />
-      <div className="insight-title">Insights</div>
-      {STATIC_INSIGHTS.map((i, idx) => (
+
+      <div className="insight-title">
+        Insights
+        {insightsLoading && <span style={{ fontSize: 11, color: "#9ca3af", marginLeft: 8 }}>updating…</span>}
+      </div>
+
+      {insights.map((i, idx) => (
         <div key={idx} className="icard">
           <div className="iico">{i.icon}</div>
           <div className="itxt">{i.body}</div>
         </div>
       ))}
+
+      <hr className="idivider" />
+
+      {/* WeatherChat — pass tasks + weather for full context */}
+      <WeatherChat tasks={items} weather={weather} />
     </aside>
   );
 }

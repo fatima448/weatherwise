@@ -944,3 +944,192 @@ body {
 
   animation: fadeUp 0.22s ease;
 }
+/* ── WeatherChat — append these styles to the bottom of App.css ── */
+
+.wchat {
+  border-radius: 14px;
+  border: 1px solid rgba(255,255,255,0.1);
+  background: rgba(255,255,255,0.05);
+  overflow: hidden;
+  margin-top: 4px;
+}
+
+.wchat-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+}
+
+.wchat-icon { font-size: 16px; }
+
+.wchat-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  flex: 1;
+  font-family: var(--font-d);
+}
+
+.wchat-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #4ade80;
+}
+
+.wchat-msgs {
+  max-height: 260px;
+  overflow-y: auto;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255,255,255,0.1) transparent;
+}
+
+.wchat-msg {
+  display: flex;
+  align-items: flex-start;
+  gap: 7px;
+  max-width: 90%;
+}
+
+.wchat-msg.user {
+  align-self: flex-end;
+  flex-direction: row-reverse;
+}
+
+.wchat-avatar {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: rgba(99, 102, 241, 0.3);
+  color: #a5b4fc;
+  font-size: 11px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-family: var(--font-d);
+}
+
+.wchat-bubble {
+  padding: 8px 12px;
+  border-radius: 12px;
+  font-size: 12.5px;
+  line-height: 1.55;
+  font-family: var(--font-s);
+  background: rgba(255,255,255,0.07);
+  color: var(--text);
+  border: 1px solid rgba(255,255,255,0.08);
+}
+
+.wchat-msg.user .wchat-bubble {
+  background: rgba(99, 102, 241, 0.25);
+  border-color: rgba(99, 102, 241, 0.3);
+  color: #e0e7ff;
+}
+
+/* Typing indicator */
+.wchat-typing {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+  padding: 10px 14px !important;
+}
+.wchat-typing span {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #9ca3af;
+  animation: wchat-bounce 1.2s infinite;
+}
+.wchat-typing span:nth-child(2) { animation-delay: .2s; }
+.wchat-typing span:nth-child(3) { animation-delay: .4s; }
+
+@keyframes wchat-bounce {
+  0%,60%,100% { transform: translateY(0); }
+  30% { transform: translateY(-4px); }
+}
+
+/* Quick-prompt chips */
+.wchat-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  padding: 0 10px 10px;
+}
+
+.wchat-chip {
+  font-size: 11px;
+  padding: 4px 10px;
+  border-radius: 99px;
+  border: 1px solid rgba(255,255,255,0.12);
+  background: rgba(255,255,255,0.05);
+  color: var(--text2);
+  cursor: pointer;
+  transition: background 0.15s;
+  font-family: var(--font-s);
+  white-space: nowrap;
+}
+.wchat-chip:hover {
+  background: rgba(255,255,255,0.12);
+  color: var(--text);
+}
+
+/* Input row */
+.wchat-input-row {
+  display: flex;
+  gap: 6px;
+  padding: 8px 10px;
+  border-top: 1px solid rgba(255,255,255,0.08);
+  align-items: flex-end;
+}
+
+.wchat-input {
+  flex: 1;
+  resize: none;
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 10px;
+  padding: 8px 11px;
+  font-size: 12.5px;
+  font-family: var(--font-s);
+  color: var(--text);
+  background: rgba(255,255,255,0.06);
+  min-height: 36px;
+  max-height: 100px;
+  outline: none;
+  line-height: 1.5;
+}
+.wchat-input:focus {
+  border-color: rgba(99, 102, 241, 0.5);
+  background: rgba(255,255,255,0.09);
+}
+.wchat-input::placeholder { color: var(--text2); }
+
+.wchat-send {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: rgba(99, 102, 241, 0.4);
+  border: none;
+  cursor: pointer;
+  color: #e0e7ff;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: opacity 0.15s, background 0.15s;
+}
+.wchat-send:hover:not(:disabled) {
+  background: rgba(99, 102, 241, 0.6);
+}
+.wchat-send:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
