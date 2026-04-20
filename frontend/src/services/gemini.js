@@ -60,43 +60,7 @@ Respond ONLY with this JSON:
   return parseJSON(text);
 }
 
-// ── 2. Generate dynamic insights ─────────────────────────────────────────
-// Called once when ReschedulePanel mounts with real weather data
-export async function generateInsights(weather, tasks) {
-  const current = weather?.current ?? {};
-  const conflicts = tasks.filter((t) => t.conflict).map((t) => t.label);
-
-  const system = `You are a friendly personal weather advisor — like a friend who checked the weather for you.
-Always respond with valid JSON only — no markdown, no explanation.`;
-
-  const user = `Today's weather:
-- Temperature: ${current.temperature_2m ?? "?"}°C
-- Feels like: ${current.apparent_temperature ?? "?"}°C
-- Humidity: ${current.relative_humidity_2m ?? "?"}%
-- Wind: ${current.wind_speed_10m ?? "?"} km/h
-- UV index: ${current.uv_index ?? "?"}
-- Weather code: ${current.weathercode ?? 0}
-
-Tasks with weather conflicts: ${conflicts.length ? conflicts.join(", ") : "none"}
-
-Write exactly 3 short insights. Rules:
-- Sound like a friend texting you, not a weather app
-- Be specific to the actual numbers above (mention actual temp, wind, etc.)
-- Each must be genuinely different — no two about the same topic
-- Do NOT just say "bring umbrella" or "wear sunscreen" — say something smarter
-
-Respond ONLY with this JSON array:
-[
-  { "icon": "emoji", "body": "insight text (max 12 words)" },
-  { "icon": "emoji", "body": "insight text (max 12 words)" },
-  { "icon": "emoji", "body": "insight text (max 12 words)" }
-]`;
-
-  const text = await callGemini(system, user, 250);
-  return parseJSON(text);
-}
-
-// ── 3. Multi-turn chat ────────────────────────────────────────────────────
+// ── 2. Multi-turn chat ────────────────────────────────────────────────────
 // Called by WeatherChat for each user message
 // history = [{ role: "user"|"model", parts: [{ text }] }]
 export async function chatWithAssistant(history, tasks, weather) {

@@ -919,54 +919,7 @@ body {
   cursor: pointer;
   font-weight: 700;
 }
-/* INSIGHTS */
 
-.idivider {
-  border: none;
-  border-top: 1px solid var(--bdr);
-  margin: 18px 0;
-}
-.insight-title {
-  font-family: var(--font-d);
-  font-size: 16px;
-  font-weight: 700;
-  letter-spacing: 2.5px;
-  text-transform: uppercase;
-  color: var(--text3);
-  margin-bottom: 13px;
-}
-
-.icard {
-  border-radius: 14px;
-  padding: 12px 14px;
-  background: rgba(255, 255, 255, 0.2);
-  backdrop-filter: blur(8px);
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  margin-bottom: 9px;
-  display: flex;
-  align-items: flex-start;
-  gap: 10px;
-}
-
-.iico {
-  font-size: 20px;
-  flex-shrink: 0;
-  margin-top: 1px;
-}
-
-.itxt {
-  font-size: 15px;
-  color: var(--text2);
-  font-style: italic;
-  line-height: 1.5;
-}
-
-.itxt strong {
-  color: var(--text);
-  font-style: normal;
-  font-family: var(--font-d);
-  font-size: 13px;
-}
 /* TOAST */
 
 .toast {
@@ -1209,7 +1162,3 @@ body {
   display: none;
 }
 
-/* MLBadge dropdown fadeUp (reuses existing .fu animation) */
-.ml-dropdown {
-  animation: fadeUp 0.18s cubic-bezier(0.22, 1, 0.36, 1) both;
-}

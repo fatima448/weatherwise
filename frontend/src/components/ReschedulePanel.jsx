@@ -1,14 +1,11 @@
 // src/components/ReschedulePanel.jsx  — UPDATED
 // Changes vs original:
-//  1. Insights fix: re-generates when tasks change, but with a 3-second debounce
-//     so Gemini is only called ONCE after the user stops adding tasks — not on every keystroke.
-//     Also skips the call if insights were generated less than 60 seconds ago (cost saver).
-//  2. Conflict tasks now glow red with a pulsing border (no existing styles changed).
-//  3. Indoor tasks also get flagged if there's a severe weather conflict (storm/flood).
+//  1. Conflict tasks now glow red with a pulsing border (no existing styles changed).
+//  2. Indoor tasks also get flagged if there's a severe weather conflict (storm/flood).
 
 import { useState, useEffect, useRef } from "react";
 import { getForecastAtHour } from "../services/weather";
-import { classifyTaskConflict, generateInsights } from "../services/gemini";
+import { classifyTaskConflict } from "../services/gemini";
 import { formatTime } from "../utils/weatherHelpers";
 import { EMOJIS } from "../data/emojiMap";
 import WeatherChat from "./WeatherChat";
@@ -19,12 +16,6 @@ const DEFAULT_TASKS = [
   { id: 3, label: "Outdoor Lunch", time: "1:00 PM", hour: 13, icon: "🍱", conflict: false, conflictReason: null, fix: "" },
   { id: 4, label: "Grocery Run",   time: "7:00 PM", hour: 19, icon: "🛒", conflict: false, conflictReason: null, fix: "" },
   { id: 5, label: "Dinner Out",    time: "7:30 PM", hour: 19, icon: "🍽️", conflict: true,  conflictReason: "Wind conditions worsen in the evening", fix: "Avoid later hours" },
-];
-
-const FALLBACK_INSIGHTS = [
-  { icon: "💧", body: "Stay hydrated — warm day, drink extra water" },
-  { icon: "⏰", body: "Best productivity window is 2–5 PM" },
-  { icon: "🌤️", body: "Check back later for evening forecast updates" },
 ];
 
 /* ── Single task item ── */
@@ -120,44 +111,6 @@ export default function ReschedulePanel({ toast, lat, lon, weather, onTasksChang
   const [newTime, setNewTime]   = useState("");
   const [showForm, setShowForm] = useState(false);
   const [adding, setAdding]     = useState(false);
-  const [insights, setInsights] = useState(FALLBACK_INSIGHTS);
-  const [insightsLoading, setInsightsLoading] = useState(false);
-
-  // ── Track last time insights were generated (cost saver) ──────────────
-  const lastInsightTime = useRef(0);
-  const debounceTimer   = useRef(null);
-
-  // ── Smart insights: re-generate when weather OR tasks change ──────────
-  // But debounced by 3 seconds so rapid task adds only fire ONE Gemini call.
-  // Also skips if insights were generated less than 60 seconds ago.
-  useEffect(() => {
-    if (!weather) return;
-
-    // Clear previous pending debounce
-    if (debounceTimer.current) clearTimeout(debounceTimer.current);
-
-    debounceTimer.current = setTimeout(() => {
-      const now = Date.now();
-      const secondsSinceLast = (now - lastInsightTime.current) / 1000;
-
-      // Skip if we just generated insights recently (60-second cooldown)
-      if (secondsSinceLast < 60 && lastInsightTime.current !== 0) return;
-
-      setInsightsLoading(true);
-      lastInsightTime.current = now;
-
-      generateInsights(weather, items)
-        .then((data) => {
-          if (Array.isArray(data) && data.length) setInsights(data);
-        })
-        .catch(() => {/* keep fallback */})
-        .finally(() => setInsightsLoading(false));
-    }, 3000); // 3-second debounce
-
-    return () => {
-      if (debounceTimer.current) clearTimeout(debounceTimer.current);
-    };
-  }, [weather, items]); // ← now re-runs when tasks change too
 
   const deleteItem = (id) => {
     setItems((prev) => prev.filter((i) => i.id !== id));
@@ -265,34 +218,7 @@ export default function ReschedulePanel({ toast, lat, lon, weather, onTasksChang
 
       <hr className="idivider" />
 
-      <div className="insight-title">
-        Insights
-        {insightsLoading && <span style={{ fontSize: 11, color: "#9ca3af", marginLeft: 8 }}>updating…</span>}
-      </div>
-
-      {insights.map((i, idx) => (
-        <div key={idx} className="icard">
-          <div className="iico">{i.icon}</div>
-          <div className="itxt">{i.body}</div>
-        </div>
-      ))}
-
-      <hr className="idivider" />
-
       <WeatherChat tasks={items} weather={weather} />
     </aside>
   );
 }
-
-// ─── IMPORTANT: Add onTasksChange prop to the Panel signature ───────────────
-// Replace the export default function line with:
-//
-// export default function ReschedulePanel({ toast, lat, lon, weather, onTasksChange }) {
-//
-// And add this useEffect inside the Panel, after the items state declaration:
-//
-// useEffect(() => {
-//   if (onTasksChange) onTasksChange(items);
-// }, [items, onTasksChange]);
-//
-// This is already done in the file above — just making it explicit here.

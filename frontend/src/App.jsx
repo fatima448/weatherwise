@@ -1,9 +1,7 @@
-// src/App.jsx  — WeatherWise (updated: MLBadge + HourlyTimeline added)
+// src/App.jsx  — WeatherWise (updated: HourlyTimeline added)
 // ONLY additions vs original:
-//   - import MLBadge
 //   - import HourlyTimeline
 //   - [tasks, setTasks] state passed from ReschedulePanel (via prop drilling removed — see note)
-//   - MLBadge placed in greet-row next to CitySearch
 //   - HourlyTimeline placed between WeatherCard and SmartSuggestions
 //
 // NOTE: HourlyTimeline needs the tasks list. Since tasks live in ReschedulePanel,
@@ -27,9 +25,7 @@ import WeatherCard   from "./components/WeatherCard";
 import SmartSuggestions from "./components/SmartSuggestions";
 import ReschedulePanel  from "./components/ReschedulePanel";
 import CitySearch    from "./components/CitySearch";
-import MLBadge       from "./components/MLBadge";
 import HourlyTimeline from "./components/HourlyTimeline";
-import { runMLModels, openMeteoToMLInput } from "./services/mlModels";
 
 import {
   getWeatherTheme,
@@ -59,7 +55,6 @@ export default function App() {
   const [greeting, setGreeting]     = useState("");
   const [mlPred, setMlPred]         = useState(null);
   const [mlError, setMlError]       = useState(false);
-  const [mlInsights, setMlInsights] = useState(null);
   const [lat, setLat]               = useState(null);
   const [lon, setLon]               = useState(null);
   const [cityName, setCityName]     = useState("");
@@ -113,10 +108,6 @@ export default function App() {
         setWeather(data);
         setTheme(getWeatherTheme(data.current.weathercode, isDay));
         setGreeting(getGreeting(localHour));
-
-        const mlInput = openMeteoToMLInput(data);
-        const insights = runMLModels(mlInput);
-        setMlInsights(insights);
       })
       .catch((err) => console.error("Weather fetch failed:", err));
 
@@ -170,9 +161,8 @@ export default function App() {
               </div>
             </div>
 
-            {/* Right side of greet row: MLBadge + CitySearch */}
+            {/* Right side of greet row: CitySearch */}
             <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
-              <MLBadge mlInsights={mlInsights} />
               <CitySearch onCityChange={handleCityChange} toast={setToast} />
             </div>
           </div>
@@ -189,7 +179,6 @@ export default function App() {
           <SmartSuggestions
             mlPrediction={mlPred}
             weather={weather}
-            mlInsights={mlInsights}
             timezone={cityTimezone}
           />
         </main>
