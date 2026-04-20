@@ -174,7 +174,8 @@ export default function App() {
           />
 
           {/* Hourly conflict timeline — shows tasks vs weather hour by hour */}
-          <HourlyTimeline weather={weather} tasks={tasks} />
+          {/* FIX: pass timezone so hour matching uses city local time, not browser time */}
+          <HourlyTimeline weather={weather} tasks={tasks} timezone={cityTimezone} />
 
           <SmartSuggestions
             mlPrediction={mlPred}
