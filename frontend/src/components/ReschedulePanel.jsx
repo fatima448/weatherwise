@@ -1,5 +1,12 @@
-// src/components/ReschedulePanel.jsx
-import { useState, useEffect } from "react";
+// src/components/ReschedulePanel.jsx  — UPDATED
+// Changes vs original:
+//  1. Insights fix: re-generates when tasks change, but with a 3-second debounce
+//     so Gemini is only called ONCE after the user stops adding tasks — not on every keystroke.
+//     Also skips the call if insights were generated less than 60 seconds ago (cost saver).
+//  2. Conflict tasks now glow red with a pulsing border (no existing styles changed).
+//  3. Indoor tasks also get flagged if there's a severe weather conflict (storm/flood).
+
+import { useState, useEffect, useRef } from "react";
 import { getForecastAtHour } from "../services/weather";
 import { classifyTaskConflict, generateInsights } from "../services/gemini";
 import { formatTime } from "../utils/weatherHelpers";
@@ -32,6 +39,12 @@ function RescheduleItem({ item, onResolve, onDelete, toast }) {
     <div
       className={`titem ${item.conflict && !done ? "conflict" : ""} ${done ? "done" : ""}`}
       onClick={() => setOpen((o) => !o)}
+      style={item.conflict && !done ? {
+        // Glowing red pulse border for conflicting tasks
+        border: "1.5px solid rgba(248, 113, 113, 0.6)",
+        boxShadow: "0 0 0 3px rgba(248, 113, 113, 0.12), 0 2px 12px rgba(248, 113, 113, 0.15)",
+        animation: "conflictPulse 2.5s ease-in-out infinite",
+      } : {}}
     >
       <div className="trow">
         <div className={`temoji ${item.conflict && !done ? "conflict" : ""}`}>{item.icon}</div>
@@ -44,7 +57,17 @@ function RescheduleItem({ item, onResolve, onDelete, toast }) {
             </div>
           )}
         </div>
-        {item.conflict && !done && <div className="tbadge">⚠️ Conflict</div>}
+        {item.conflict && !done && (
+          <div className="tbadge" style={{
+            background: "rgba(248,113,113,0.18)",
+            color: "#f87171",
+            border: "1px solid rgba(248,113,113,0.35)",
+            fontWeight: 800,
+            fontSize: 11,
+          }}>
+            ⚠️ Conflict
+          </div>
+        )}
       </div>
 
       {open && !done && (
@@ -86,8 +109,13 @@ function RescheduleItem({ item, onResolve, onDelete, toast }) {
 }
 
 /* ── Panel ── */
-export default function ReschedulePanel({ toast, lat, lon, weather }) {
+export default function ReschedulePanel({ toast, lat, lon, weather, onTasksChange }) {
   const [items, setItems]       = useState(DEFAULT_TASKS);
+
+  // ── Sync tasks up to App.jsx so HourlyTimeline can see them ──────────
+  useEffect(() => {
+    if (onTasksChange) onTasksChange(items);
+  }, [items, onTasksChange]);
   const [newLabel, setNewLabel] = useState("");
   const [newTime, setNewTime]   = useState("");
   const [showForm, setShowForm] = useState(false);
@@ -95,17 +123,41 @@ export default function ReschedulePanel({ toast, lat, lon, weather }) {
   const [insights, setInsights] = useState(FALLBACK_INSIGHTS);
   const [insightsLoading, setInsightsLoading] = useState(false);
 
-  // ── Generate insights when weather data arrives ──────────────────────
+  // ── Track last time insights were generated (cost saver) ──────────────
+  const lastInsightTime = useRef(0);
+  const debounceTimer   = useRef(null);
+
+  // ── Smart insights: re-generate when weather OR tasks change ──────────
+  // But debounced by 3 seconds so rapid task adds only fire ONE Gemini call.
+  // Also skips if insights were generated less than 60 seconds ago.
   useEffect(() => {
     if (!weather) return;
-    setInsightsLoading(true);
-    generateInsights(weather, items)
-      .then((data) => {
-        if (Array.isArray(data) && data.length) setInsights(data);
-      })
-      .catch(() => {/* keep fallback */})
-      .finally(() => setInsightsLoading(false));
-  }, [weather]); // only re-run when weather changes, not on every task update
+
+    // Clear previous pending debounce
+    if (debounceTimer.current) clearTimeout(debounceTimer.current);
+
+    debounceTimer.current = setTimeout(() => {
+      const now = Date.now();
+      const secondsSinceLast = (now - lastInsightTime.current) / 1000;
+
+      // Skip if we just generated insights recently (60-second cooldown)
+      if (secondsSinceLast < 60 && lastInsightTime.current !== 0) return;
+
+      setInsightsLoading(true);
+      lastInsightTime.current = now;
+
+      generateInsights(weather, items)
+        .then((data) => {
+          if (Array.isArray(data) && data.length) setInsights(data);
+        })
+        .catch(() => {/* keep fallback */})
+        .finally(() => setInsightsLoading(false));
+    }, 3000); // 3-second debounce
+
+    return () => {
+      if (debounceTimer.current) clearTimeout(debounceTimer.current);
+    };
+  }, [weather, items]); // ← now re-runs when tasks change too
 
   const deleteItem = (id) => {
     setItems((prev) => prev.filter((i) => i.id !== id));
@@ -128,23 +180,20 @@ export default function ReschedulePanel({ toast, lat, lon, weather }) {
     let conflict = false, conflictReason = null, fix = "", icon = "🌳";
 
     try {
-      // Step 1: get the real hourly forecast for that time slot
       const forecast = await getForecastAtHour(lat, lon, h);
+      const result   = await classifyTaskConflict(newLabel, h, forecast);
 
-      // Step 2: ask Gemini — is this outdoor? is there a conflict?
-      const result = await classifyTaskConflict(newLabel, h, forecast);
-
-      if (result.isOutdoor && result.hasConflict) {
-        conflict = true;
+      // Flag conflict for outdoor tasks AND for severe weather (storms) even indoors
+      const severeWeather = forecast?.weathercode >= 95 || forecast?.precipitation_probability > 80;
+      if ((result.isOutdoor && result.hasConflict) || (!result.isOutdoor && severeWeather && result.hasConflict)) {
+        conflict       = true;
         conflictReason = result.conflictReason;
-        fix = result.suggestedFix;
+        fix            = result.suggestedFix;
       }
 
-      // Use Gemini's emoji suggestion, fall back to EMOJIS map, then default
       icon = result.emoji || EMOJIS[newLabel.toLowerCase()] || (result.isOutdoor ? "🌳" : "🏠");
 
     } catch (e) {
-      // Gemini failed — fall back to the old rule-based logic
       console.warn("Gemini classification failed, using fallback", e);
       try {
         const forecast = await getForecastAtHour(lat, lon, h);
@@ -154,9 +203,9 @@ export default function ReschedulePanel({ toast, lat, lon, weather }) {
           if (forecast.weathercode >= 95) reasons.push("thunderstorm");
           if (forecast.windspeed > 40)    reasons.push("strong winds");
           if (reasons.length > 0) {
-            conflict = true;
+            conflict       = true;
             conflictReason = reasons.join(" & ") + " expected at this hour";
-            fix = "Consider rescheduling to a better time window";
+            fix            = "Consider rescheduling to a better time window";
           }
         }
       } catch {/* silent */}
@@ -196,7 +245,6 @@ export default function ReschedulePanel({ toast, lat, lon, weather }) {
             onChange={(e) => setNewTime(e.target.value)}
             style={{ marginBottom: 8 }}
           />
-          {/* No indoor/outdoor toggle — Gemini figures it out automatically */}
           <div style={{ display: "flex", gap: 8 }}>
             <button
               className="confirm-btn"
@@ -231,8 +279,20 @@ export default function ReschedulePanel({ toast, lat, lon, weather }) {
 
       <hr className="idivider" />
 
-      {/* WeatherChat — pass tasks + weather for full context */}
       <WeatherChat tasks={items} weather={weather} />
     </aside>
   );
 }
+
+// ─── IMPORTANT: Add onTasksChange prop to the Panel signature ───────────────
+// Replace the export default function line with:
+//
+// export default function ReschedulePanel({ toast, lat, lon, weather, onTasksChange }) {
+//
+// And add this useEffect inside the Panel, after the items state declaration:
+//
+// useEffect(() => {
+//   if (onTasksChange) onTasksChange(items);
+// }, [items, onTasksChange]);
+//
+// This is already done in the file above — just making it explicit here.
