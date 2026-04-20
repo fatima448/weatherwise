@@ -18,65 +18,10 @@ const CLOTHING_EMOJI = {
   very_light_clothing_stay_hydrated: "😎",
 };
 
-// ─── Safety Check Card ────────────────────────────────────────────────────────
-function SafetyCheckCard({ mlInsights }) {
-  if (!mlInsights) {
-    return (
-      <div className="scard amber">
-        <div className="sicon">🛡️</div>
-        <div className="stxt">Checking conditions…</div>
-        <span className="stag amber">One moment</span>
-      </div>
-    );
-  }
-
-  const {
-    uvProtection,
-    hydrationAlert,
-    roadSurface,
-    windAlert,
-    windChillWarning,
-    outdoorPoor,
-  } = mlInsights;
-
-  const activeAlerts = [
-    hydrationAlert.triggered,
-    windAlert.triggered,
-    windChillWarning.triggered,
-    outdoorPoor.triggered,
-  ].filter(Boolean).length;
-
-  const cardColor = activeAlerts >= 2 ? "red" : "amber";
-
-  const headline =
-    outdoorPoor.triggered                 ? "It's rough out there — better to stay in"
-    : windChillWarning.triggered          ? "Bundle up, it feels colder than it looks"
-    : windAlert.triggered                 ? "Heads up — strong gusts out there"
-    : hydrationAlert.triggered            ? "Drink some water, it's warm today"
-    : roadSurface.label === "icy"         ? "Roads are icy — take it slow"
-    : roadSurface.label === "wet"         ? "Roads are wet — give extra space"
-    : uvProtection.label === "sunscreen"  ? "Don't forget sunscreen before heading out"
-    : uvProtection.label === "sunglasses" ? "Grab your sunglasses — UV is moderate"
-    :                                       "You're good to go";
-
-  const tag =
-    activeAlerts === 0
-      ? "All good"
-      : `${activeAlerts} heads-up${activeAlerts > 1 ? "s" : ""}`;
-
-  return (
-    <div className={`scard ${cardColor}`}>
-      <div className="sicon">🛡️</div>
-      <div className="stxt">{headline}</div>
-      <span className={`stag ${cardColor}`}>{tag}</span>
-    </div>
-  );
-}
-
 // ─── Main Component ────────────────────────────────────────────────────────────
 // timezone is now received and passed into getWeatherAlert so it reads
 // the correct hour slot for whichever city is being viewed
-export default function SmartSuggestions({ mlPrediction, weather, mlInsights, timezone }) {
+export default function SmartSuggestions({ mlPrediction, weather, timezone }) {
   const weatherCode = weather?.current?.weathercode ?? 0;
   const alert       = getWeatherAlert(weather, timezone);  // ← timezone passed here
 
@@ -104,10 +49,7 @@ export default function SmartSuggestions({ mlPrediction, weather, mlInsights, ti
             <span className="stag violet">Now</span>
           </div>
 
-          {/* Card 2 — Safety Check */}
-          <SafetyCheckCard mlInsights={mlInsights} />
-
-          {/* Card 3 — Top activities (60%+ confidence only) */}
+          {/* Card 2 — Top activities (60%+ confidence only) */}
           <div className="scard green">
             <div className="sicon">{confidentActivities[0]?.emoji ?? "🏃"}</div>
             <div className="stxt">Best activities now</div>
@@ -155,7 +97,7 @@ export default function SmartSuggestions({ mlPrediction, weather, mlInsights, ti
             <span className="stag green">Best now</span>
           </div>
 
-          {/* Card 4 — Weather alert (next 6 hours, timezone-aware) */}
+          {/* Card 3 — Weather alert (next 6 hours, timezone-aware) */}
           <div className={`scard ${alert?.color ?? "green"}`}>
             <div className="sicon">{alert?.icon ?? "✅"}</div>
             <div className="stxt">{alert?.title ?? "Weather looks stable"}</div>
@@ -181,7 +123,6 @@ export default function SmartSuggestions({ mlPrediction, weather, mlInsights, ti
   // ── Fallback when ML is offline ──────────────────────────────────────────────
   const fallback = [
     { icon: "🧥", text: "Light jacket for this evening", tag: "6 PM+",      color: "violet" },
-    { icon: "🛡️", text: "Checking conditions…",          tag: "One moment", color: "amber"  },
     { icon: "🚶", text: "Perfect for a walk right now",  tag: "Now",        color: "green"  },
     { icon: "🌿", text: "Low pollen today",              tag: "All day",    color: "amber"  },
   ];
