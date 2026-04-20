@@ -8,104 +8,19 @@
   --text: #000000;
   --text2: #413025;
   --text3: #b89880;
-
   --s1: #f5f5f5;
   --s2: #d6d6d3;
-
   --bdr: rgba(195, 187, 187, 0.1);
   --bdr2: rgba(191, 188, 188, 0.08);
-
   --amber: #f59e0b;
   --blue: #38bdf8;
   --green: #4ade80;
   --violet: #a78bfa;
   --red: #f87171;
-
   --font-d: "Onest", sans-serif;
   --font-s: "Inter", sans-serif;
 }
-@media (max-width: 900px) {
-  .app-shell {
-    flex-direction: column;
-    padding: 12px;
-  }
 
-  .main-content,
-  .rpanel {
-    flex: 1 1 100%;
-  }
-  .rpanel {
-    padding: 20px 10px;
-  }
-
-  .titem {
-    padding: 12px;
-  }
-}
-@media (max-width: 600px) {
-  .wcard-content {
-    grid-template-columns: 1fr;
-    text-align: center;
-  }
-  .greet-name {
-    font-size: 22px;
-  }
-  .greet-row {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 12px;
-  }
-  .city-search {
-    width: 100%;
-    align-items: stretch;
-  }
-  .city-search-row {
-    width: 100%;
-    justify-content: space-between;
-  }
-  .city-input,
-  .city-input:focus {
-    width: 100%;
-  }
-
-  .main-content {
-    padding: 20px 10px;
-  }
-
-  .wcard {
-    padding: 18px;
-  }
-
-  .wcard-title {
-    font-size: 14px;
-  }
-
-  .wcond {
-    font-size: 18px;
-  }
-
-  .left {
-    justify-content: center;
-  }
-
-  .right {
-    justify-content: center;
-  }
-
-  .wicon {
-    font-size: 4rem;
-  }
-
-  .wtemp {
-    font-size: 40px;
-  }
-  .sgrid {
-    grid-template-columns: 1fr;
-  }
-  .scard.span2 {
-    grid-column: span 1;
-  }
-}
 /* ── RESET ── */
 * {
   box-sizing: border-box;
@@ -135,12 +50,7 @@ body {
 ::-webkit-scrollbar {
   width: 0;
 }
-.card-skeleton {
-  height: 200px;
-  border-radius: 20px;
-  background: linear-gradient(90deg, #eee, #ddd, #eee);
-  animation: shimmer 1.5s infinite;
-}
+
 /* ── ANIMATIONS ── */
 @keyframes shimmer {
   0% {
@@ -159,7 +69,6 @@ body {
     transform: translateY(-10px);
   }
 }
-
 @keyframes fadeUp {
   from {
     opacity: 0;
@@ -170,7 +79,6 @@ body {
     transform: translateY(0);
   }
 }
-
 @keyframes pulse {
   0%,
   100% {
@@ -178,6 +86,54 @@ body {
   }
   50% {
     opacity: 0.3;
+  }
+}
+@keyframes rain {
+  from {
+    transform: translateY(-10px);
+  }
+  to {
+    transform: translateY(10px);
+  }
+}
+@keyframes snow {
+  from {
+    transform: translateY(-10px);
+  }
+  to {
+    transform: translateY(10px);
+  }
+}
+@keyframes flash {
+  0%,
+  100% {
+    opacity: 0;
+  }
+  50% {
+    opacity: 0.2;
+  }
+}
+@keyframes conflictPulse {
+  0%,
+  100% {
+    box-shadow:
+      0 0 0 3px rgba(248, 113, 113, 0.12),
+      0 2px 12px rgba(248, 113, 113, 0.15);
+  }
+  50% {
+    box-shadow:
+      0 0 0 6px rgba(248, 113, 113, 0.22),
+      0 4px 20px rgba(248, 113, 113, 0.25);
+  }
+}
+@keyframes wchat-bounce {
+  0%,
+  60%,
+  100% {
+    transform: translateY(0);
+  }
+  30% {
+    transform: translateY(-4px);
   }
 }
 
@@ -197,6 +153,12 @@ body {
 .d4 {
   animation-delay: 0.26s;
 }
+.card-skeleton {
+  height: 200px;
+  border-radius: 20px;
+  background: linear-gradient(90deg, #eee, #ddd, #eee);
+  animation: shimmer 1.5s infinite;
+}
 
 /* ── LAYOUT ── */
 .app-shell {
@@ -208,27 +170,228 @@ body {
 .main-content {
   flex: 1.2;
   min-width: 300px;
-  overflow-y: auto;
   padding: clamp(12px, 3vw, 40px);
-  max-height: 100vh;
+}
+
+/* ── RIGHT PANEL ──
+   Key fix: flex-direction column + overflow-y auto so chat is always visible.
+   We do NOT use margin-top:auto on wchat (that only works inside a flex col
+   with a fixed height). Instead the panel has a natural scroll and the chat
+   sits right after the divider.
+*/
+.rpanel {
+  background: rgba(255, 255, 255, 0.25);
+  backdrop-filter: blur(14px);
+  border-left: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 20px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  flex: 0.8;
+  min-width: 280px;
+  /* no max-height here — set per breakpoint below */
+}
+
+/* ── DESKTOP: both panels scroll independently ── */
+@media (min-width: 901px) {
+  .app-shell {
+    height: 100vh;
+    overflow: hidden;
+  }
+  .main-content {
+    max-height: 100vh;
+    overflow-y: auto;
+  }
+  .rpanel {
+    max-height: 100vh;
+    overflow-y: auto;
+  }
+}
+
+/* ── TABLET ── */
+@media (max-width: 900px) {
+  html,
+  body {
+    width: 100%;
+    overflow-x: hidden;
+  }
+  .app-shell {
+    flex-direction: column;
+    padding: 0;
+    width: 100%;
+    overflow-x: hidden;
+    height: auto;
+    overflow: visible;
+  }
+  .main-content {
+    flex: 1 1 100%;
+    min-width: 0;
+    width: 100%;
+    max-height: none;
+    overflow-y: visible;
+    padding: 16px;
+  }
+  .rpanel {
+    flex: 1 1 100%;
+    min-width: 0;
+    width: 100%;
+    max-height: none;
+    overflow-y: visible;
+    padding: 20px 16px;
+    border-left: none;
+    border-top: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 0;
+  }
+  .titem {
+    padding: 12px;
+  }
+  .wcard,
+  .sgrid,
+  .scard,
+  .icard,
+  .titem {
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+}
+
+/* ── MOBILE ── */
+@media (max-width: 600px) {
+  html,
+  body {
+    width: 100%;
+    overflow-x: hidden;
+  }
+
+  /* Greeting row: name top, controls row below */
+  .greet-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+  .greet-name {
+    font-size: 22px;
+  }
+
+  /* greet-controls: MLBadge + CitySearch side-by-side in a row */
+  .greet-controls {
+    flex-direction: row !important; /* override any column from JS */
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 8px;
+    width: 100%;
+  }
+
+  /* City search: shrink to fit alongside MLBadge */
+  .city-search {
+    align-items: flex-start;
+    flex: 1;
+    min-width: 0;
+  }
+  .city-search-row {
+    width: 100%;
+    justify-content: space-between;
+  }
+  .city-input {
+    width: 100%;
+  }
+  .city-input:focus {
+    width: 100%;
+  }
+
+  .main-content {
+    padding: 16px;
+    min-width: 0;
+    max-height: none;
+    overflow: visible;
+  }
+
+  .wcard {
+    padding: 18px;
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+  .wcard-content {
+    grid-template-columns: 1fr;
+    text-align: center;
+  }
+  .wcard-title {
+    font-size: 14px;
+  }
+  .wcond {
+    font-size: 18px;
+  }
+  .left {
+    justify-content: center;
+  }
+  .right {
+    justify-content: center;
+  }
+  .wicon {
+    font-size: 4rem;
+  }
+  .wtemp {
+    font-size: 40px;
+  }
+
+  .sgrid {
+    grid-template-columns: 1fr;
+  }
+  .scard.span2 {
+    grid-column: span 1;
+  }
+
+  /* ML badge dropdown fixed-centered on mobile */
+  .ml-dropdown {
+    position: fixed !important;
+    top: 80px !important;
+    left: 50% !important;
+    transform: translateX(-50%) !important;
+    width: calc(100vw - 32px) !important;
+    max-width: 380px !important;
+    z-index: 99999 !important;
+    overflow-wrap: break-word;
+    word-break: break-word;
+  }
+
+  /* Hourly: slightly smaller slots */
+  .hourly-strip {
+    gap: 6px;
+    padding-bottom: 6px;
+  }
+  .hourly-slot {
+    min-width: 52px;
+    padding: 8px 4px;
+  }
+
+  /* Chat: comfortable on mobile */
+  .wchat {
+    border-radius: 12px;
+  }
+  .wchat-msgs {
+    max-height: 200px;
+  }
 }
 
 /* ── TOAST ── */
 .toast {
   position: fixed;
-  top: 20px;
+  top: 22px;
   left: 50%;
   transform: translateX(-50%);
-  background: #1a0f00;
-  color: #fff;
-  border-radius: 14px;
-  padding: 11px 24px;
+  background: #fef3c7;
+  color: #1c1000;
+  border-radius: 13px;
+  padding: 10px 22px;
   font-size: 13px;
   font-weight: 700;
+  font-family: var(--font-d);
   z-index: 9999;
   white-space: nowrap;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
-  animation: fadeUp 0.2s ease;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35);
+  animation: fadeUp 0.22s ease;
 }
 
 /* ── SECTION LABEL ── */
@@ -240,7 +403,6 @@ body {
   color: #b89880;
   margin-bottom: 16px;
 }
-
 .section-label.red {
   color: #f87171;
 }
@@ -248,14 +410,14 @@ body {
   color: #4ade80;
 }
 
-/* MAIN */
+/* ── MAIN ── */
 .main {
   overflow-y: auto;
   padding: 36px 32px;
   background: var(--bg);
 }
 
-/* GREETING */
+/* ── GREETING ── */
 .greet-row {
   display: flex;
   align-items: flex-start;
@@ -280,12 +442,6 @@ body {
   -webkit-text-fill-color: transparent;
   background-clip: text;
 }
-.greet-date {
-  font-size: 14px;
-  color: #9a8c7b; /* soft warm tone matching your theme */
-  margin-top: 4px;
-  letter-spacing: 0.5px;
-}
 .greet-sub {
   font-size: 13px;
   color: var(--text2);
@@ -300,22 +456,31 @@ body {
   font-weight: 700;
   letter-spacing: 1px;
   text-transform: uppercase;
+  margin-top: 4px;
 }
-
 .greet-city {
   color: var(--amber);
   font-weight: 700;
   letter-spacing: 0.5px;
 }
 
-/* City search bar */
+/* greet-controls: MLBadge + CitySearch always a flex row */
+.greet-controls {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+/* ── CITY SEARCH ── */
 .city-search {
   display: flex;
   flex-direction: column;
   align-items: flex-end;
   gap: 6px;
 }
-
 .city-search-row {
   display: flex;
   align-items: center;
@@ -327,13 +492,11 @@ body {
   transition: all 0.22s ease;
   box-shadow: 0 2px 12px rgba(184, 152, 128, 0.08);
 }
-
 .city-search-row:focus-within {
   border-color: var(--amber);
   box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.1);
   background: rgba(255, 255, 255, 0.65);
 }
-
 .city-input {
   border: none;
   background: transparent;
@@ -345,7 +508,6 @@ body {
   width: 130px;
   transition: width 0.3s ease;
 }
-
 .city-input::placeholder {
   color: var(--text3);
   font-weight: 500;
@@ -353,7 +515,6 @@ body {
 .city-input:focus {
   width: 180px;
 }
-
 .city-btn {
   border: none;
   background: rgba(245, 158, 11, 0.12);
@@ -369,7 +530,6 @@ body {
   flex-shrink: 0;
   transition: background 0.18s;
 }
-
 .city-btn:hover {
   background: rgba(245, 158, 11, 0.25);
 }
@@ -377,7 +537,6 @@ body {
   opacity: 0.5;
   cursor: not-allowed;
 }
-
 .city-error {
   font-size: 11px;
   color: var(--red);
@@ -386,8 +545,7 @@ body {
   padding: 0 6px;
 }
 
-/* WEATHER CARD */
-
+/* ── WEATHER CARD ── */
 .wcard {
   border-radius: 22px;
   padding: clamp(14px, 2vw, 26px);
@@ -396,7 +554,6 @@ body {
   overflow: hidden;
   margin-bottom: 22px;
 }
-
 .wcard.sunny::after {
   content: "";
   position: absolute;
@@ -425,15 +582,6 @@ body {
   background: rgba(255, 255, 255, 0.05);
   backdrop-filter: blur(10px);
 }
-@keyframes rain {
-  from {
-    transform: translateY(-10px);
-  }
-  to {
-    transform: translateY(10px);
-  }
-}
-
 .wcard.rainy::after {
   content: "";
   position: absolute;
@@ -447,15 +595,6 @@ body {
   );
   animation: rain 0.4s linear infinite;
 }
-@keyframes snow {
-  from {
-    transform: translateY(-10px);
-  }
-  to {
-    transform: translateY(10px);
-  }
-}
-
 .wcard.snowy::after {
   content: "";
   position: absolute;
@@ -465,16 +604,6 @@ body {
   animation: snow 2s linear infinite;
   opacity: 0.4;
 }
-@keyframes flash {
-  0%,
-  100% {
-    opacity: 0;
-  }
-  50% {
-    opacity: 0.2;
-  }
-}
-
 .wcard.storm::after {
   content: "";
   position: absolute;
@@ -482,7 +611,6 @@ body {
   background: white;
   animation: flash 2s infinite;
 }
-
 .wcard::before {
   content: "";
   position: absolute;
@@ -494,7 +622,6 @@ body {
   );
   pointer-events: none;
 }
-
 .wcard-title {
   font-family: var(--font-d);
   font-size: 18px;
@@ -504,21 +631,18 @@ body {
   color: inherit;
   margin-bottom: 14px;
 }
-
 .wcard-main {
   display: flex;
   align-items: center;
   gap: 18px;
   margin-bottom: 18px;
 }
-
 .wicon {
   font-size: 7rem;
   line-height: 1;
   animation: float 5s ease-in-out infinite;
   padding: 10px;
 }
-
 .wtemp {
   font-family: var(--font-d);
   font-size: 40px;
@@ -527,16 +651,13 @@ body {
   line-height: 1;
   letter-spacing: -3px;
 }
-
 .wcond {
   font-family: var(--font-s);
   font-size: 30px;
   font-weight: 700;
   margin-bottom: 3px;
-  opacity: 1;
   padding: 5px;
 }
-
 .wdesc {
   font-size: 13px;
   color: var(--text2);
@@ -544,8 +665,7 @@ body {
   line-height: 1.5;
 }
 
-/* SUGGESTIONS */
-
+/* ── SUGGESTIONS ── */
 .smart-title {
   font-family: var(--font-d);
   font-size: 20px;
@@ -555,13 +675,11 @@ body {
   color: var(--text3);
   margin-bottom: 13px;
 }
-
 .sgrid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
   gap: 11px;
 }
-
 .scard {
   border-radius: 17px;
   padding: 15px;
@@ -576,49 +694,35 @@ body {
 .scard.span2 {
   grid-column: span 2;
 }
-
-/* ── Red alert card color ── */
 .scard.red {
   background: rgba(248, 113, 113, 0.08);
   border-color: rgba(248, 113, 113, 0.25);
 }
-
-.stag.red {
-  background: rgba(248, 113, 113, 0.2);
-  color: var(--red);
-}
-
-.scard:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.35);
-}
-
 .scard.green {
   background: rgba(52, 211, 153, 0.08);
   border-color: rgba(52, 211, 153, 0.25);
 }
-
 .scard.amber {
   background: rgba(245, 158, 11, 0.08);
   border-color: rgba(245, 158, 11, 0.25);
 }
-
 .scard.blue {
   background: rgba(56, 189, 248, 0.08);
   border-color: rgba(56, 189, 248, 0.25);
 }
-
 .scard.violet {
   background: rgba(167, 139, 250, 0.08);
   border-color: rgba(167, 139, 250, 0.25);
 }
-
+.scard:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.35);
+}
 .sicon {
   font-size: 28px;
   margin-bottom: 10px;
   display: block;
 }
-
 .stxt {
   font-size: 15px;
   font-weight: 600;
@@ -627,7 +731,6 @@ body {
   font-family: var(--font-d);
   margin-bottom: 6px;
 }
-
 .stag {
   display: inline-block;
   font-family: var(--font-d);
@@ -637,43 +740,28 @@ body {
   border-radius: 99px;
   padding: 5px 10px;
 }
-
+.stag.red {
+  background: rgba(248, 113, 113, 0.2);
+  color: var(--red);
+}
 .stag.green {
   background: rgba(52, 211, 153, 0.2);
   color: var(--green);
 }
-
 .stag.amber {
   background: rgba(245, 158, 11, 0.2);
   color: var(--amber);
 }
-
 .stag.blue {
   background: rgba(56, 189, 248, 0.2);
   color: var(--blue);
 }
-
 .stag.violet {
   background: rgba(167, 139, 250, 0.2);
   color: var(--violet);
 }
-/* RIGHT PANEL */
 
-.rpanel {
-  background: rgba(255, 255, 255, 0.25);
-  backdrop-filter: blur(14px);
-  border-left: 1px solid rgba(255, 255, 255, 0.2);
-  border-radius: 20px;
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
-  padding: 24px;
-  overflow-y: auto;
-  display: flex;
-  flex-direction: column;
-  max-height: 100vh;
-  flex: 0.8;
-  min-width: 280px;
-}
-
+/* ── TASK PANEL ── */
 .task-title {
   font-family: var(--font-d);
   font-size: 18px;
@@ -683,9 +771,6 @@ body {
   color: var(--text3);
   margin-bottom: 16px;
 }
-
-/* TASK */
-
 .titem {
   border-radius: 16px;
   padding: 14px 16px;
@@ -696,27 +781,22 @@ body {
   cursor: pointer;
   transition: all 0.2s ease;
 }
-
 .titem:hover {
   background: #ebe0c1;
   transform: translateX(-2px);
 }
-
 .titem.conflict {
   background: rgba(248, 113, 113, 0.08);
   border: 1px solid rgba(248, 113, 113, 0.3);
 }
-
 .titem.done {
   opacity: 0.4;
 }
-
 .trow {
   display: flex;
   align-items: center;
   gap: 11px;
 }
-
 .temoji {
   width: 36px;
   height: 36px;
@@ -728,11 +808,9 @@ body {
   font-size: 17px;
   flex-shrink: 0;
 }
-
 .temoji.conflict {
   background: rgba(248, 113, 113, 0.12);
 }
-
 .tname {
   font-family: var(--font-d);
   font-size: 14px;
@@ -740,19 +818,16 @@ body {
   color: var(--text);
   line-height: 1.2;
 }
-
 .tname.done {
   text-decoration: line-through;
   color: var(--text3);
 }
-
 .ttime {
   font-size: 11px;
   color: var(--text3);
   margin-top: 2px;
   font-style: italic;
 }
-
 .tbadge {
   margin-left: auto;
   background: rgba(248, 113, 113, 0.15);
@@ -766,14 +841,12 @@ body {
   white-space: nowrap;
   flex-shrink: 0;
 }
-
 .texpand {
   margin-top: 11px;
   padding-top: 11px;
   border-top: 1px dashed var(--bdr2);
   animation: fadeUp 0.2s ease;
 }
-
 .thint {
   font-size: 12px;
   color: var(--green);
@@ -784,13 +857,11 @@ body {
   padding: 6px 10px;
   margin-bottom: 9px;
 }
-
 .tbtns {
   display: flex;
   gap: 6px;
   flex-wrap: wrap;
 }
-
 .tbtn {
   border: none;
   border-radius: 8px;
@@ -801,21 +872,17 @@ body {
   font-family: var(--font-d);
   transition: opacity 0.15s;
 }
-
 .tbtn:hover {
   opacity: 0.8;
 }
-
 .tbtn.move {
   background: rgba(52, 211, 153, 0.15);
   color: var(--green);
 }
-
 .tbtn.later {
   background: rgba(56, 189, 248, 0.15);
   color: var(--blue);
 }
-
 .tbtn.doneb {
   background: rgba(255, 255, 255, 0.06);
   color: var(--text2);
@@ -823,24 +890,21 @@ body {
 }
 .tbtn.delete {
   margin-left: auto;
-
   border: none;
   background: rgba(255, 255, 255, 0.06);
-
   cursor: pointer;
   font-size: 12px;
   transition: 0.2s;
 }
-
 .tbtn.delete,
 .tbtn.doneb:hover {
   opacity: 0.6;
   transform: scale(1);
 }
-
 .titem:hover .delete-btn {
   opacity: 1;
 }
+
 .addbtn {
   width: 100%;
   border: 1.5px dashed var(--bdr2);
@@ -859,40 +923,35 @@ body {
   justify-content: center;
   gap: 6px;
 }
-
 .addbtn:hover {
   border-color: var(--amber);
   color: var(--amber);
   background: rgba(245, 158, 11, 0.05);
 }
+
 .inline-add {
   display: flex;
   align-items: center;
   gap: 8px;
-
   padding: 12px;
   border-radius: 16px;
-
   background: rgba(255, 255, 255, 0.3);
   backdrop-filter: blur(10px);
-
   border: 1px solid rgba(0, 0, 0, 0.05);
 }
 .inline-add input {
   border: none;
   background: transparent;
   outline: none;
-
   font-family: var(--font-d);
   font-size: 13px;
   font-weight: 600;
-
   color: var(--text);
 }
-
 .inline-add input[type="text"] {
   flex: 1;
 }
+
 .type-btn {
   padding: 8px 14px;
   border-radius: 20px;
@@ -902,7 +961,6 @@ body {
   font-size: 13px;
   transition: 0.2s;
 }
-
 .type-btn.active {
   background: #dff7e2;
   border-color: #4caf50;
@@ -912,46 +970,72 @@ body {
   border: none;
   background: rgba(16, 185, 129, 0.15);
   color: #10b981;
-
   border-radius: 10px;
   padding: 6px 10px;
-
   cursor: pointer;
   font-weight: 700;
 }
 
-/* TOAST */
-
-.toast {
-  position: fixed;
-  top: 22px;
-  left: 50%;
-  transform: translateX(-50%);
-
-  background: #fef3c7;
-  color: #1c1000;
-
-  border-radius: 13px;
-  padding: 10px 22px;
-
-  font-size: 13px;
-  font-weight: 700;
+/* ── INSIGHTS / DIVIDER ── */
+.idivider {
+  border: none;
+  border-top: 1px solid var(--bdr);
+  margin: 18px 0;
+}
+.insight-title {
   font-family: var(--font-d);
-
-  z-index: 9999;
-  white-space: nowrap;
-
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35);
-
-  animation: fadeUp 0.22s ease;
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: 2.5px;
+  text-transform: uppercase;
+  color: var(--text3);
+  margin-bottom: 13px;
 }
-/* ── WeatherChat — append these styles to the bottom of App.css ── */
+.icard {
+  border-radius: 14px;
+  padding: 12px 14px;
+  background: rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  margin-bottom: 9px;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+.iico {
+  font-size: 20px;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+.itxt {
+  font-size: 15px;
+  color: var(--text2);
+  font-style: italic;
+  line-height: 1.5;
+}
+.itxt strong {
+  color: var(--text);
+  font-style: normal;
+  font-family: var(--font-d);
+  font-size: 13px;
+}
+
+/* ── WEATHER CHAT ──
+   FIX: margin-top:24px gives breathing room above chat.
+   The panel uses overflow-y:auto on desktop so the chat is always reachable
+   by scrolling — no clipping. We do NOT use margin-top:auto (that hides
+   content when the panel is shorter than its children).
+*/
 .wchat {
-  margin-top: auto;
-  background: rgba(255,255,255,0.1);
+  margin-top: 24px;
+  background: rgba(255, 255, 255, 0.12);
   backdrop-filter: blur(10px);
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  overflow: hidden;
+  /* Ensure it's never accidentally hidden */
+  flex-shrink: 0;
 }
-
 .wchat-header {
   display: flex;
   align-items: center;
@@ -959,11 +1043,9 @@ body {
   padding: 10px 14px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
-
 .wchat-icon {
   font-size: 16px;
 }
-
 .wchat-title {
   font-size: 13px;
   font-weight: 600;
@@ -971,7 +1053,6 @@ body {
   flex: 1;
   font-family: var(--font-d);
 }
-
 .wchat-dot {
   width: 7px;
   height: 7px;
@@ -989,19 +1070,16 @@ body {
   scrollbar-width: thin;
   scrollbar-color: rgba(255, 255, 255, 0.1) transparent;
 }
-
 .wchat-msg {
   display: flex;
   align-items: flex-start;
   gap: 7px;
   max-width: 90%;
 }
-
 .wchat-msg.user {
   align-self: flex-end;
   flex-direction: row-reverse;
 }
-
 .wchat-avatar {
   width: 24px;
   height: 24px;
@@ -1016,7 +1094,6 @@ body {
   flex-shrink: 0;
   font-family: var(--font-d);
 }
-
 .wchat-bubble {
   padding: 8px 12px;
   border-radius: 12px;
@@ -1027,14 +1104,11 @@ body {
   color: var(--text);
   border: 1px solid rgba(255, 255, 255, 0.08);
 }
-
 .wchat-msg.user .wchat-bubble {
   background: rgba(99, 102, 241, 0.25);
   border-color: rgba(99, 102, 241, 0.3);
   color: #e0e7ff;
 }
-
-/* Typing indicator */
 .wchat-typing {
   display: flex;
   gap: 4px;
@@ -1055,25 +1129,12 @@ body {
   animation-delay: 0.4s;
 }
 
-@keyframes wchat-bounce {
-  0%,
-  60%,
-  100% {
-    transform: translateY(0);
-  }
-  30% {
-    transform: translateY(-4px);
-  }
-}
-
-/* Quick-prompt chips */
 .wchat-chips {
   display: flex;
   flex-wrap: wrap;
   gap: 5px;
   padding: 0 10px 10px;
 }
-
 .wchat-chip {
   font-size: 11px;
   padding: 4px 10px;
@@ -1091,7 +1152,6 @@ body {
   color: var(--text);
 }
 
-/* Input row */
 .wchat-input-row {
   display: flex;
   gap: 6px;
@@ -1099,7 +1159,6 @@ body {
   border-top: 1px solid rgba(255, 255, 255, 0.08);
   align-items: flex-end;
 }
-
 .wchat-input {
   flex: 1;
   resize: none;
@@ -1147,18 +1206,13 @@ body {
   opacity: 0.35;
   cursor: default;
 }
-/* Glowing red pulse for conflicting tasks */
-@keyframes conflictPulse {
-  0%, 100% {
-    box-shadow: 0 0 0 3px rgba(248, 113, 113, 0.12), 0 2px 12px rgba(248, 113, 113, 0.15);
-  }
-  50% {
-    box-shadow: 0 0 0 6px rgba(248, 113, 113, 0.22), 0 4px 20px rgba(248, 113, 113, 0.25);
-  }
+
+/* ── ML DROPDOWN ── */
+.ml-dropdown {
+  animation: fadeUp 0.18s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
-/* Hourly timeline scrollbar hide for webkit */
+/* ── Hourly timeline scrollbar hide ── */
 .hourly-strip::-webkit-scrollbar {
   display: none;
 }
-

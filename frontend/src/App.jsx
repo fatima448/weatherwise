@@ -1,16 +1,8 @@
-// src/App.jsx  — WeatherWise (updated: HourlyTimeline added)
-// ONLY additions vs original:
-//   - import HourlyTimeline
-//   - [tasks, setTasks] state passed from ReschedulePanel (via prop drilling removed — see note)
-//   - HourlyTimeline placed between WeatherCard and SmartSuggestions
-//
-// NOTE: HourlyTimeline needs the tasks list. Since tasks live in ReschedulePanel,
-// we lift tasks state up to App.jsx and pass it down as a prop.
-// ReschedulePanel already accepts items via props if you add `tasks` + `setTasks` props.
-// The simplest zero-refactor approach: HourlyTimeline reads DEFAULT_TASKS from a shared const.
-// We use a shared ref callback pattern below — no restructuring needed.
+// src/App.jsx — WeatherWise
+// FIX: mlInsights extraction — tries mlPred.mlInsights first, then falls back
+// to mlPred itself in case the service returns insights at the top level.
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef } from "react";
 import "./App.css";
 
 import {
@@ -20,12 +12,13 @@ import {
   getCityName,
 } from "./services/weather";
 
-import Toast         from "./components/Toast";
-import WeatherCard   from "./components/WeatherCard";
+import Toast            from "./components/Toast";
+import WeatherCard      from "./components/WeatherCard";
 import SmartSuggestions from "./components/SmartSuggestions";
 import ReschedulePanel  from "./components/ReschedulePanel";
-import CitySearch    from "./components/CitySearch";
-import HourlyTimeline from "./components/HourlyTimeline";
+import CitySearch       from "./components/CitySearch";
+import HourlyTimeline   from "./components/HourlyTimeline";
+import MLBadge          from "./components/MLBadge";
 
 import {
   getWeatherTheme,
@@ -48,6 +41,38 @@ function getLocalHourInTz(timezone) {
   }
 }
 
+// ── Extract the 6 GB model outputs from whatever shape the service returns ──
+// getMLPredictionAll may return:
+//   { mlInsights: { uvProtection, hydrationAlert, ... }, clothing_recommendation, ... }
+// OR it may return:
+//   { uvProtection, hydrationAlert, ..., clothing_recommendation, ... }   (flat)
+// We handle both.
+function extractMlInsights(mlPred) {
+  if (!mlPred) return null;
+
+  // If there's an explicit mlInsights sub-object, use it
+  if (mlPred.mlInsights && typeof mlPred.mlInsights === "object") {
+    return mlPred.mlInsights;
+  }
+
+  // Otherwise check if the 6 expected keys exist directly on mlPred
+  const INSIGHT_KEYS = [
+    "uvProtection", "hydrationAlert", "roadSurface",
+    "windAlert", "windChillWarning", "outdoorPoor",
+  ];
+  const hasInsightKeys = INSIGHT_KEYS.some((k) => k in mlPred);
+  if (hasInsightKeys) {
+    // Return a sub-object with just those keys so the rest of the app
+    // doesn't get confused by clothing_recommendation etc.
+    return Object.fromEntries(
+      INSIGHT_KEYS.map((k) => [k, mlPred[k] ?? {}])
+    );
+  }
+
+  // Couldn't find them — return null so cards show loading state
+  return null;
+}
+
 export default function App() {
   const [toast, setToast]           = useState(null);
   const [weather, setWeather]       = useState(null);
@@ -62,10 +87,7 @@ export default function App() {
     Intl.DateTimeFormat().resolvedOptions().timeZone,
   );
   const [locating, setLocating] = useState(true);
-
-  // ── Lifted tasks state so HourlyTimeline can see them ─────────────────
-  // ReschedulePanel will call onTasksChange whenever its items list changes.
-  const [tasks, setTasks] = useState([]);
+  const [tasks, setTasks]       = useState([]);
 
   const fetchId = useRef(0);
 
@@ -99,11 +121,9 @@ export default function App() {
     getWeather(lat, lon)
       .then((data) => {
         if (thisId !== fetchId.current) return;
-
         const tz = data.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone;
         const localHour = getLocalHourInTz(tz);
         const isDay = localHour >= 5 && localHour < 19;
-
         setCityTimezone(tz);
         setWeather(data);
         setTheme(getWeatherTheme(data.current.weathercode, isDay));
@@ -113,7 +133,11 @@ export default function App() {
 
     getMLPredictionAll(lat, lon)
       .then((pred) => {
-        if (thisId === fetchId.current) setMlPred(pred);
+        if (thisId === fetchId.current) {
+          // Log once so you can inspect the shape in DevTools
+          console.log("[WeatherWise] mlPred shape:", JSON.stringify(pred, null, 2));
+          setMlPred(pred);
+        }
       })
       .catch(() => {
         if (thisId === fetchId.current) setMlError(true);
@@ -145,11 +169,15 @@ export default function App() {
     );
   }
 
+  // Derive mlInsights using the smart extractor
+  const mlInsights = extractMlInsights(mlPred);
+
   return (
     <>
       {toast && <Toast msg={toast} onDone={() => setToast(null)} />}
       <div className="app-shell">
         <main className="main-content">
+
           <div className="greet-row">
             <div className="greet-container">
               <div className="greet-name">{greeting} 👋</div>
@@ -161,8 +189,8 @@ export default function App() {
               </div>
             </div>
 
-            {/* Right side of greet row: CitySearch */}
-            <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+            <div className="greet-controls">
+              <MLBadge mlInsights={mlInsights} mlPrediction={mlPred} />
               <CitySearch onCityChange={handleCityChange} toast={setToast} />
             </div>
           </div>
@@ -173,12 +201,11 @@ export default function App() {
             timezone={cityTimezone}
           />
 
-          {/* Hourly conflict timeline — shows tasks vs weather hour by hour */}
-          {/* FIX: pass timezone so hour matching uses city local time, not browser time */}
           <HourlyTimeline weather={weather} tasks={tasks} timezone={cityTimezone} />
 
           <SmartSuggestions
             mlPrediction={mlPred}
+            mlInsights={mlInsights}
             weather={weather}
             timezone={cityTimezone}
           />

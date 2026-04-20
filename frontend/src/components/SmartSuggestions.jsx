@@ -1,9 +1,9 @@
 // src/components/SmartSuggestions.jsx
 import { clothingLabel } from "../services/weather";
 import {
-  getExtraAdvice,
   getWeatherAlert,
   filterActivitiesByWeather,
+  getExtraAdvice
 } from "../utils/weatherHelpers";
 
 // ─── Clothing emoji map ────────────────────────────────────────────────────────
@@ -18,12 +18,62 @@ const CLOTHING_EMOJI = {
   very_light_clothing_stay_hydrated: "😎",
 };
 
+// ─── Safety Check Card ────────────────────────────────────────────────────────
+function SafetyCheckCard({ mlInsights }) {
+  const {
+    uvProtection,
+    hydrationAlert,
+    roadSurface,
+    windAlert,
+    windChillWarning,
+    outdoorPoor,
+  } = mlInsights || {};
+
+  const activeAlerts = [
+    hydrationAlert?.triggered,
+    windAlert?.triggered,
+    windChillWarning?.triggered,
+    outdoorPoor?.triggered,
+  ].filter(Boolean).length;
+
+  const cardColor = activeAlerts >= 2 ? "red" : "amber";
+
+  const headline =
+    outdoorPoor?.triggered
+      ? "It's rough out there — better to stay in"
+      : windChillWarning?.triggered
+      ? "Bundle up, it feels colder than it looks"
+      : windAlert?.triggered
+      ? "Heads up — strong gusts out there"
+      : hydrationAlert?.triggered
+      ? "Drink some water, it's warm today"
+      : roadSurface?.label === "icy"
+      ? "Roads are icy — take it slow"
+      : roadSurface?.label === "wet"
+      ? "Roads are wet — give extra space"
+      : uvProtection?.label === "sunscreen"
+      ? "Don't forget sunscreen before heading out"
+      : uvProtection?.label === "sunglasses"
+      ? "Grab your sunglasses — UV is moderate"
+      : "You're good to go";
+
+  const tag =
+    activeAlerts === 0
+      ? "All good"
+      : `${activeAlerts} heads-up${activeAlerts > 1 ? "s" : ""}`;
+
+  return (
+    <div className={`scard ${cardColor}`}>
+      <div className="sicon">🛡️</div>
+      <div className="stxt">{headline}</div>
+      <span className={`stag ${cardColor}`}>{tag}</span>
+    </div>
+  );
+}
 // ─── Main Component ────────────────────────────────────────────────────────────
-// timezone is now received and passed into getWeatherAlert so it reads
-// the correct hour slot for whichever city is being viewed
-export default function SmartSuggestions({ mlPrediction, weather, timezone }) {
+export default function SmartSuggestions({ mlPrediction, mlInsights, weather, timezone }) {
   const weatherCode = weather?.current?.weathercode ?? 0;
-  const alert       = getWeatherAlert(weather, timezone);  // ← timezone passed here
+  const alert       = getWeatherAlert(weather, timezone);
 
   // ── ML-powered path ──────────────────────────────────────────────────────────
   if (mlPrediction && mlPrediction.activity_suggestions?.length > 0) {
@@ -32,13 +82,12 @@ export default function SmartSuggestions({ mlPrediction, weather, timezone }) {
       weatherCode,
     );
 
-    // Only show activities the model is at least 60% confident about
     const confidentActivities = filteredActivities.filter(
       (a) => a.confidence >= 0.6
     );
 
     return (
-      <div>
+      <div style={{ marginBottom: 28 }}>
         <div className="smart-title">Smart Suggestions</div>
         <div className="sgrid">
 
@@ -49,7 +98,10 @@ export default function SmartSuggestions({ mlPrediction, weather, timezone }) {
             <span className="stag violet">Now</span>
           </div>
 
-          {/* Card 2 — Top activities (60%+ confidence only) */}
+          {/* Card 2 — Safety Check (reads all 6 GB model outputs) */}
+          <SafetyCheckCard mlInsights={mlInsights} />
+
+          {/* Card 3 — Best activities */}
           <div className="scard green">
             <div className="sicon">{confidentActivities[0]?.emoji ?? "🏃"}</div>
             <div className="stxt">Best activities now</div>
@@ -68,8 +120,7 @@ export default function SmartSuggestions({ mlPrediction, weather, timezone }) {
                   >
                     <span style={{ fontSize: 16 }}>{a.emoji}</span>
                     <span style={{
-                      fontSize: 13, fontWeight: 600,
-                      fontFamily: "var(--font-d)",
+                      fontSize: 13, fontWeight: 600, fontFamily: "var(--font-d)",
                       color: "var(--text)", flex: 1,
                     }}>
                       {a.label}
@@ -86,8 +137,7 @@ export default function SmartSuggestions({ mlPrediction, weather, timezone }) {
               ) : (
                 <div style={{
                   fontSize: 12, color: "var(--text2)",
-                  fontStyle: "italic", fontFamily: "var(--font-s)",
-                  lineHeight: 1.5,
+                  fontStyle: "italic", fontFamily: "var(--font-s)", lineHeight: 1.5,
                 }}>
                   Conditions aren't great for activities right now
                 </div>
@@ -97,15 +147,14 @@ export default function SmartSuggestions({ mlPrediction, weather, timezone }) {
             <span className="stag green">Best now</span>
           </div>
 
-          {/* Card 3 — Weather alert (next 6 hours, timezone-aware) */}
+          {/* Card 4 — Weather alert next 6 hours */}
           <div className={`scard ${alert?.color ?? "green"}`}>
             <div className="sicon">{alert?.icon ?? "✅"}</div>
             <div className="stxt">{alert?.title ?? "Weather looks stable"}</div>
             {alert?.body && (
               <div style={{
                 fontSize: 12, color: "var(--text2)", fontStyle: "italic",
-                lineHeight: 1.5, margin: "6px 0 10px",
-                fontFamily: "var(--font-s)",
+                lineHeight: 1.5, margin: "6px 0 10px", fontFamily: "var(--font-s)",
               }}>
                 {alert.body}
               </div>
@@ -120,24 +169,31 @@ export default function SmartSuggestions({ mlPrediction, weather, timezone }) {
     );
   }
 
-  // ── Fallback when ML is offline ──────────────────────────────────────────────
-  const fallback = [
-    { icon: "🧥", text: "Light jacket for this evening", tag: "6 PM+",      color: "violet" },
-    { icon: "🚶", text: "Perfect for a walk right now",  tag: "Now",        color: "green"  },
-    { icon: "🌿", text: "Low pollen today",              tag: "All day",    color: "amber"  },
-  ];
-
+  // ── Fallback (no ML activity suggestions yet) ─────────────────────────────
   return (
-    <div>
+    <div style={{ marginBottom: 28 }}>
       <div className="smart-title">Smart Suggestions</div>
       <div className="sgrid">
-        {fallback.map((s, i) => (
-          <div key={i} className={`scard ${s.color}`}>
-            <div className="sicon">{s.icon}</div>
-            <div className="stxt">{s.text}</div>
-            <span className={`stag ${s.color}`}>{s.tag}</span>
-          </div>
-        ))}
+        <div className="scard violet">
+          <div className="sicon">🧥</div>
+          <div className="stxt">Light jacket for this evening</div>
+          <span className="stag violet">6 PM+</span>
+        </div>
+
+        {/* SafetyCheckCard still works if mlInsights arrived independently */}
+        <SafetyCheckCard mlInsights={mlInsights} />
+
+        <div className="scard green">
+          <div className="sicon">🚶</div>
+          <div className="stxt">Perfect for a walk right now</div>
+          <span className="stag green">Now</span>
+        </div>
+
+        <div className="scard amber">
+          <div className="sicon">🌿</div>
+          <div className="stxt">Low pollen today</div>
+          <span className="stag amber">All day</span>
+        </div>
       </div>
     </div>
   );

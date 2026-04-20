@@ -38,6 +38,25 @@ ACTIVITY_MODEL_PATH   = MODEL_DIR / "activity_model.pkl"
 ACTIVITY_ENCODER_PATH = MODEL_DIR / "activity_label_encoders.pkl"   # ← NEW filename
 ACTIVITY_META_PATH    = MODEL_DIR / "activity_metadata.pkl"
 
+
+# ── Load Safety ML models (6 models) ───────────────────────────────────────
+print("Loading safety models...")
+
+UV_MODEL_PATH          = MODEL_DIR / "uv_model.pkl"
+HYDRATION_MODEL_PATH   = MODEL_DIR / "hydration_model.pkl"
+ROAD_MODEL_PATH        = MODEL_DIR / "road_surface_model.pkl"
+WIND_ALERT_MODEL_PATH  = MODEL_DIR / "wind_alert_model.pkl"
+WIND_CHILL_MODEL_PATH  = MODEL_DIR / "wind_chill_model.pkl"
+OUTDOOR_MODEL_PATH     = MODEL_DIR / "outdoor_poor_model.pkl"
+
+uv_model          = joblib.load(UV_MODEL_PATH)
+hydration_model   = joblib.load(HYDRATION_MODEL_PATH)
+road_model        = joblib.load(ROAD_MODEL_PATH)
+wind_alert_model  = joblib.load(WIND_ALERT_MODEL_PATH)
+wind_chill_model  = joblib.load(WIND_CHILL_MODEL_PATH)
+outdoor_model     = joblib.load(OUTDOOR_MODEL_PATH)
+
+
 # ── Load models at startup ──────────────────────────────────────────────────
 print("Loading clothing + umbrella models...")
 clothing_rf    = joblib.load(CLOTHING_MODEL_PATH)
@@ -377,6 +396,47 @@ def build_recommendation_text(clothing: str, umbrella: bool,
     return f"Wear {advice} ({temp:.0f}°C, {condition.replace('_', ' ')}).{umbrella_txt}"
 
 
+def build_safety_features(w: dict) -> np.ndarray:
+    return np.array([[
+        w["temperature_c"],
+        w["feels_like_c"],
+        w["humidity_pct"],
+        w["wind_speed_kmh"],
+        w["wind_gust_kmh"],
+        w["precipitation_mm"],
+        w["cloud_cover_pct"],
+        w["uv_index"]
+    ]])
+def predict_ml_insights(w: dict):
+    X = build_safety_features(w)
+
+    uv_pred        = uv_model.predict(X)[0]
+    hydration_pred = hydration_model.predict(X)[0]
+    road_pred      = road_model.predict(X)[0]
+    wind_pred      = wind_alert_model.predict(X)[0]
+    chill_pred     = wind_chill_model.predict(X)[0]
+    outdoor_pred   = outdoor_model.predict(X)[0]
+
+    return {
+        "uvProtection": {
+            "label": ["none", "sunglasses", "sunscreen"][int(uv_pred)]
+        },
+        "hydrationAlert": {
+            "triggered": bool(hydration_pred)
+        },
+        "roadSurface": {
+            "label": ["dry", "wet", "icy"][int(road_pred)]
+        },
+        "windAlert": {
+            "triggered": bool(wind_pred)
+        },
+        "windChillWarning": {
+            "triggered": bool(chill_pred)
+        },
+        "outdoorPoor": {
+            "triggered": bool(outdoor_pred)
+        }
+    }
 # ── Routes ──────────────────────────────────────────────────────────────────
 @app.get("/health")
 def health():
@@ -424,7 +484,7 @@ def predict_all(req: PredictRequest):
         )
         for item in top3
     ]
-
+    ml_insights = predict_ml_insights(w)
     # 4. Friendly text
     rec_text = build_recommendation_text(
         clothing_label, umbrella_flag,
@@ -443,6 +503,8 @@ def predict_all(req: PredictRequest):
         hour_of_day             = w["hour_of_day"],
         season                  = w["season"],
         recommendation_text     = rec_text,
+        mlInsights= ml_insights
+
     )
 
 
