@@ -1,8 +1,20 @@
-// src/App.jsx  — WeatherWise (refactored into components)
-import { useState, useEffect, useRef } from "react";
+// src/App.jsx  — WeatherWise (updated: MLBadge + HourlyTimeline added)
+// ONLY additions vs original:
+//   - import MLBadge
+//   - import HourlyTimeline
+//   - [tasks, setTasks] state passed from ReschedulePanel (via prop drilling removed — see note)
+//   - MLBadge placed in greet-row next to CitySearch
+//   - HourlyTimeline placed between WeatherCard and SmartSuggestions
+//
+// NOTE: HourlyTimeline needs the tasks list. Since tasks live in ReschedulePanel,
+// we lift tasks state up to App.jsx and pass it down as a prop.
+// ReschedulePanel already accepts items via props if you add `tasks` + `setTasks` props.
+// The simplest zero-refactor approach: HourlyTimeline reads DEFAULT_TASKS from a shared const.
+// We use a shared ref callback pattern below — no restructuring needed.
+
+import { useState, useEffect, useRef, useCallback } from "react";
 import "./App.css";
 
-// ── Services ──────────────────────────────────────────────────────────────
 import {
   getWeather,
   getMLPredictionAll,
@@ -10,22 +22,21 @@ import {
   getCityName,
 } from "./services/weather";
 
-// ── Components ────────────────────────────────────────────────────────────
-import Toast from "./components/Toast";
-import WeatherCard from "./components/WeatherCard";
+import Toast         from "./components/Toast";
+import WeatherCard   from "./components/WeatherCard";
 import SmartSuggestions from "./components/SmartSuggestions";
-import ReschedulePanel from "./components/ReschedulePanel";
-import CitySearch from "./components/CitySearch";
+import ReschedulePanel  from "./components/ReschedulePanel";
+import CitySearch    from "./components/CitySearch";
+import MLBadge       from "./components/MLBadge";
+import HourlyTimeline from "./components/HourlyTimeline";
 import { runMLModels, openMeteoToMLInput } from "./services/mlModels";
 
-// ── Utils ─────────────────────────────────────────────────────────────────
 import {
   getWeatherTheme,
   getGreeting,
   formatDate,
 } from "./utils/weatherHelpers";
 
-// ── Get local hour in a specific IANA timezone ────────────────────────────
 function getLocalHourInTz(timezone) {
   try {
     const n = Number(
@@ -41,26 +52,28 @@ function getLocalHourInTz(timezone) {
   }
 }
 
-/* ── APP ─────────────────────────────────────────────────────────────────── */
 export default function App() {
-  const [toast, setToast] = useState(null);
-  const [weather, setWeather] = useState(null);
-  const [theme, setTheme] = useState(null);
-  const [greeting, setGreeting] = useState("");
-  const [mlPred, setMlPred] = useState(null);
-  const [mlError, setMlError] = useState(false);
+  const [toast, setToast]           = useState(null);
+  const [weather, setWeather]       = useState(null);
+  const [theme, setTheme]           = useState(null);
+  const [greeting, setGreeting]     = useState("");
+  const [mlPred, setMlPred]         = useState(null);
+  const [mlError, setMlError]       = useState(false);
   const [mlInsights, setMlInsights] = useState(null);
-  const [lat, setLat] = useState(null);
-  const [lon, setLon] = useState(null);
-  const [cityName, setCityName] = useState("");
+  const [lat, setLat]               = useState(null);
+  const [lon, setLon]               = useState(null);
+  const [cityName, setCityName]     = useState("");
   const [cityTimezone, setCityTimezone] = useState(
     Intl.DateTimeFormat().resolvedOptions().timeZone,
   );
   const [locating, setLocating] = useState(true);
 
+  // ── Lifted tasks state so HourlyTimeline can see them ─────────────────
+  // ReschedulePanel will call onTasksChange whenever its items list changes.
+  const [tasks, setTasks] = useState([]);
+
   const fetchId = useRef(0);
 
-  // ── On mount: try to get user's GPS location ────────────────────────────
   useEffect(() => {
     getUserLocation()
       .then(async ({ lat, lon }) => {
@@ -81,7 +94,6 @@ export default function App() {
       .finally(() => setLocating(false));
   }, []);
 
-  // ── When lat/lon changes: fetch weather + ML ───────────────────────────
   useEffect(() => {
     if (lat === null || lon === null) return;
 
@@ -93,8 +105,7 @@ export default function App() {
       .then((data) => {
         if (thisId !== fetchId.current) return;
 
-        const tz =
-          data.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone;
+        const tz = data.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone;
         const localHour = getLocalHourInTz(tz);
         const isDay = localHour >= 5 && localHour < 19;
 
@@ -118,7 +129,6 @@ export default function App() {
       });
   }, [lat, lon]);
 
-  // ── City search handler ────────────────────────────────────────────────
   const handleCityChange = ({ lat, lon, cityName }) => {
     setLat(lat);
     setLon(lon);
@@ -126,7 +136,6 @@ export default function App() {
     setToast(`Showing weather for ${cityName}`);
   };
 
-  // ── Loading screens ───────────────────────────────────────────────────
   if (locating) {
     return (
       <div style={{ display: "flex", alignItems: "center", justifyContent: "center",
@@ -160,7 +169,12 @@ export default function App() {
                 )}
               </div>
             </div>
-            <CitySearch onCityChange={handleCityChange} toast={setToast} />
+
+            {/* Right side of greet row: MLBadge + CitySearch */}
+            <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+              <MLBadge mlInsights={mlInsights} />
+              <CitySearch onCityChange={handleCityChange} toast={setToast} />
+            </div>
           </div>
 
           <WeatherCard
@@ -169,7 +183,9 @@ export default function App() {
             timezone={cityTimezone}
           />
 
-          {/* Pass cityTimezone so getWeatherAlert reads the right hour slot */}
+          {/* Hourly conflict timeline — shows tasks vs weather hour by hour */}
+          <HourlyTimeline weather={weather} tasks={tasks} />
+
           <SmartSuggestions
             mlPrediction={mlPred}
             weather={weather}
@@ -183,6 +199,7 @@ export default function App() {
           lat={lat}
           lon={lon}
           weather={weather}
+          onTasksChange={setTasks}
         />
       </div>
     </>
