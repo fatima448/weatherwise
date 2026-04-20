@@ -1,232 +1,152 @@
-# 🌦️ WeatherWise
+# 🌤️ WeatherWise — AI-Powered Weather Task Planner
 
-**Developer README & Change Log**
-📅 April 2026 · Hackathon Build
+> **Hackathon Submission — Team 038 · Sivas Hackathon 2026**
 
----
-
-## 📌 Project Overview
-
-**WeatherWise** is a real-time weather intelligence app that converts raw weather data into actionable advice.
-
-Instead of just showing temperature, it helps users:
-
-* 👕 Decide what to wear
-* ☔ Know if they need an umbrella
-* 🏃 Choose suitable activities
-* ⚠️ Get alerts about upcoming weather changes
-
-A machine learning backend built with **FastAPI + Random Forest** powers the recommendations.
+WeatherWise is a real-time weather application that uses **6 custom-trained ML models** and **Google Gemini AI** to help you plan your day smarter — detecting conflicts between your tasks and the weather before they happen.
 
 ---
 
-## 🗂️ Project Structure
+## ✨ Features
 
-### 📁 Frontend (`src/`)
+### 🤖 6 Gradient Boosting ML Models (client-side, zero latency)
+All models trained on **43,440 real weather observations** with F1 scores ≥ 0.989:
 
-```
-src/
-├── App.jsx
-├── App.css
-├── services/
-│   └── weather.js
-├── utils/
-│   └── weatherHelpers.js
-├── data/
-│   └── emojiMap.js
-└── components/
-    ├── Toast.jsx
-    ├── WeatherCard.jsx
-    ├── CitySearch.jsx
-    ├── SmartSuggestions.jsx
-    └── ReschedulePanel.jsx
-```
+| Model | What it predicts |
+|---|---|
+| A — UV Protection | None / Sunglasses / Sunscreen |
+| B — Hydration Alert | Drink water warning |
+| C — Road Surface | Dry / Wet / Icy |
+| D — Wind Alert | Dangerous gust detection |
+| E — Wind Chill | Feels colder than it looks |
+| F — Outdoor Conditions | Poor outdoor suitability |
 
-### ⚙️ Backend
+### 🌦️ Hourly Conflict Timeline
+Visual hour-by-hour strip showing your tasks overlaid on the weather forecast — conflicts highlighted in red at a glance.
 
-```
-server.py
-models/
-├── clothing_model.pkl
-├── umbrella_model.pkl
-├── activity_model.pkl
-├── label_encoders.pkl
-├── activity_encoders.pkl
-└── feature_metadata.pkl
+### ⚠️ Smart Task Conflict Detection
+Add any task → Gemini AI automatically determines:
+- Is this outdoor or indoor?
+- What weather conditions would make it hard?
+- Is there a conflict right now?
+- What's the best fix?
+
+### 💬 AI Weather Chat
+Multi-turn conversational assistant that knows your tasks, your schedule, and today's weather — like a friend who checked everything for you.
+
+### 🔍 Personalized Insights
+3 AI-generated insights per session, updated when weather or your tasks change. Debounced and cached to minimize API cost.
+
+---
+
+## 🚀 Getting Started
+
+### Prerequisites
+- Node.js 18+
+- Python 3.10+ (for the ML backend)
+- A free [Google Gemini API key](https://aistudio.google.com/app/apikey)
+
+### 1. Clone the repo
+```bash
+git clone https://github.com/your-team/weatherwise.git
+cd weatherwise
 ```
 
----
-
-## 🔄 Change Log
-
----
-
-### ✅ Change 1 — Component Refactor
-
-**Problem:**
-`App.jsx` was ~670 lines → hard to maintain
-
-**Solution:**
-
-* Reduced to ~90 lines
-* Split into reusable components
-* Moved helpers to `utils/`
-* Moved API calls to `services/`
-
-**Result:**
-✔ Clean structure
-✔ Easier debugging
-✔ Better scalability
-
----
-
-### 📍 Change 2 — Automatic User Location
-
-**Before:**
-
-* Always showed Istanbul (hardcoded)
-
-**Now:**
-
-* Uses browser **Geolocation API**
-* Falls back to Istanbul if denied
-
-**APIs Used:**
-
-* Browser Geolocation
-* Nominatim (reverse geocoding)
-* Open-Meteo (search)
-
----
-
-### 🏙️ Change 3 — City Name in Header
-
-Now displays:
-
-```
-Saturday, April 18 · 📍 Istanbul
+### 2. Set up the frontend
+```bash
+cd frontend
 ```
 
-✔ Updates dynamically when user searches a city
-
----
-
-### ☔ Change 4 — Umbrella Bug Fix
-
-**Problem:**
-ML sometimes said “No umbrella” during rain
-
-**Fix:**
-Added rule-based fallback:
-
-```js
-export function shouldBringUmbrella(mlPrediction, weatherCode) {
-  const isRainingNow = weatherCode >= 51 && weatherCode <= 99;
-  return isRainingNow || mlPrediction?.umbrella_needed === true;
-}
+Create a `.env` file:
+```
+VITE_GEMINI_API_KEY=your_gemini_api_key_here
 ```
 
-✔ Real weather overrides ML mistakes
-
----
-
-### 🏃 Change 5 — Activity Suggestions Fix
-
-**Problem:**
-Outdoor activities suggested during rain
-
-**Fix:**
-
-* Penalize outdoor activities
-* Boost indoor ones
-
-```js
-const OUTDOOR_ACTIVITIES = new Set([
-  'running', 'cycling', 'walking', 'picnic', 'sports', 'outdoor_work'
-]);
-```
-
-✔ Smarter, realistic recommendations
-
----
-
-### ⚠️ Change 6 — Weather Alert Card
-
-Replaced static hourly data with smart alerts:
-
-**Alert Types:**
-
-* 🌧️ Rain coming
-* ⛈️ Storm approaching
-* 🌡️ Temperature drop
-* 💨 Strong winds
-* ❄️ Snow expected
-* ✅ Stable weather
-
-✔ Color-coded alerts (blue, red, amber, green)
-
----
-
-## 🚀 How to Run
-
-### Frontend
-
+Install and run:
 ```bash
 npm install
 npm run dev
 ```
 
-### Backend
-
+### 3. Set up the backend (optional — for ML clothing/activity predictions)
 ```bash
-pip install fastapi uvicorn joblib numpy requests
-uvicorn server:app --host 0.0.0.0 --port 8000 --reload
+cd backend
+pip install -r requirements.txt
+python server.py
 ```
 
-### Train Model (one-time)
-
+### 4. Build for production
 ```bash
-python train_activity_model.py
+cd frontend
+npm run build
+```
+Upload the `dist/` folder to your server.
+
+---
+
+## 🏗️ Architecture
+
+```
+Browser
+  ├── React Frontend (Vite)
+  │     ├── 6 ML Models (pure JS, client-side)
+  │     ├── Gemini 2.0 Flash API (task classification + insights + chat)
+  │     └── Open-Meteo API (free weather + hourly forecast)
+  └── Python Backend (FastAPI)
+        └── Clothing & activity predictions
+```
+
+### Why client-side ML?
+All 6 Gradient Boosting models run **directly in the browser** — no server needed. This means:
+- ⚡ Zero latency (instant predictions)
+- 💰 Zero cost (no API calls)
+- 🌐 Works offline once loaded
+
+---
+
+## 💡 AI Cost Strategy
+
+To keep Gemini API usage minimal:
+- **Task classification**: 1 call per task added (~150 tokens)
+- **Insights**: Generated with a **3-second debounce** + **60-second cooldown** — so adding multiple tasks fires only 1 call, not many
+- **Chat**: Only on explicit user message
+- **Fallbacks**: Every Gemini call has a rule-based fallback if the API is unavailable
+
+Estimated daily cost on free tier (1,500 req/day): supports ~300 active users/day comfortably.
+
+---
+
+## 📁 Project Structure
+
+```
+frontend/
+  src/
+    components/
+      MLBadge.jsx          ← NEW: floating AI model status button
+      HourlyTimeline.jsx   ← NEW: hourly weather + task conflict visual
+      ReschedulePanel.jsx  ← Tasks + insights + chat panel
+      SmartSuggestions.jsx ← ML-powered suggestion cards
+      WeatherCard.jsx      ← Current conditions card
+      WeatherChat.jsx      ← AI chat assistant
+      CitySearch.jsx       ← City search input
+    services/
+      gemini.js            ← All Gemini AI calls
+      mlModels.js          ← 6 client-side ML models
+      weather.js           ← Open-Meteo + geolocation
+    utils/
+      weatherHelpers.js    ← Theming, alerts, formatting
+backend/
+  server.py                ← FastAPI ML prediction server
 ```
 
 ---
 
-## 🔗 APIs Used
+## 🌐 Live Demo
 
-All free (no API key required):
-
-* Open-Meteo (weather + forecast)
-* Open-Meteo Geocoding
-* Nominatim (OpenStreetMap)
-* Browser Geolocation API
+**[team-038.hackaton.sivas.edu.tr](https://team-038.hackaton.sivas.edu.tr)**
 
 ---
 
-## 🤖 ML Endpoints
+## 👥 Team
 
-* `POST /predict/all` → clothing + umbrella + activities
-* `POST /predict` → clothing + umbrella
-* `GET /health` → model status
+**Team 038** — Sivas Hackathon 2026
 
----
-
-## 💡 Key Highlights
-
-* Real-time weather intelligence
-* ML-powered recommendations
-* Smart fallback logic (rule + ML)
-* Clean, scalable architecture
-
----
-
-## 👩‍💻 Developer Notes
-
-This project focuses on:
-
-* Clean architecture
-* Practical ML usage (not over-engineered)
-* Real-world usability over theory
-
----
-
-✨ Built for a hackathon, designed like a startup product.
