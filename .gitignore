@@ -1,0 +1,21 @@
+# Environment variables and secrets
+.env
+.env.*
+!.env.example
+
+# Python virtual environments and generated files
+backend/venv/
+backend/.venv/
+**/__pycache__/
+*.py[cod]
+
+# JavaScript dependencies and build output
+**/node_modules/
+**/dist/
+**/.next/
+
+# Local IDE and OS files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
